@@ -284,3 +284,247 @@ class DeviceRepository:
         
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def get_device_usage_statistics(self, filters: dict = None, skip: int = 0, limit: int = 20) -> tuple:
+        """Get detailed device usage statistics."""
+        from ..models.loan import DeviceLoan, DeviceLoanItem, LoanStatus
+        
+        # Base query for device usage statistics
+        base_query = """
+        SELECT 
+            d.id as device_id,
+            d.nup_device,
+            d.device_name,
+            COALESCE(d.bmn_brand, d.sample_brand) as device_brand,
+            d.device_year,
+            d.device_condition,
+            d.device_status,
+            COALESCE(usage_stats.total_usage_days, 0) as total_usage_days,
+            COALESCE(usage_stats.total_loans, 0) as total_loans,
+            usage_stats.last_used_date,
+            usage_stats.last_borrower,
+            usage_stats.last_activity,
+            CASE 
+                WHEN usage_stats.total_loans > 0 
+                THEN ROUND(usage_stats.total_usage_days::numeric / usage_stats.total_loans::numeric, 2)
+                ELSE 0 
+            END as average_usage_per_loan,
+            CASE 
+                WHEN usage_stats.total_loans = 0 THEN 0
+                WHEN usage_stats.total_loans >= 20 THEN 100
+                ELSE ROUND((usage_stats.total_loans::numeric / 20::numeric) * 100, 1)
+            END as usage_frequency_score
+        FROM devices d
+        LEFT JOIN (
+            SELECT 
+                dli.device_id,
+                SUM(dl.usage_duration_days * dli.quantity) as total_usage_days,
+                COUNT(DISTINCT dl.id) as total_loans,
+                MAX(dl.loan_end_date) as last_used_date,
+                MAX(dl.borrower_name) FILTER (WHERE dl.loan_end_date = MAX(dl.loan_end_date) OVER (PARTITION BY dli.device_id)) as last_borrower,
+                MAX(dl.activity_name) FILTER (WHERE dl.loan_end_date = MAX(dl.loan_end_date) OVER (PARTITION BY dli.device_id)) as last_activity
+            FROM device_loan_items dli
+            JOIN device_loans dl ON dli.loan_id = dl.id
+            WHERE dl.deleted_at IS NULL 
+                AND dl.status IN ('RETURNED', 'OVERDUE', 'ACTIVE')
+            GROUP BY dli.device_id
+        ) usage_stats ON d.id = usage_stats.device_id
+        WHERE d.deleted_at IS NULL
+        """
+        
+        # Add filters
+        filter_conditions = []
+        params = {}
+        
+        if filters:
+            if filters.get("device_name"):
+                filter_conditions.append("d.device_name ILIKE :device_name")
+                params["device_name"] = f"%{filters['device_name']}%"
+            
+            if filters.get("nup_device"):
+                filter_conditions.append("d.nup_device ILIKE :nup_device")
+                params["nup_device"] = f"%{filters['nup_device']}%"
+            
+            if filters.get("device_brand"):
+                filter_conditions.append("(d.bmn_brand ILIKE :device_brand OR d.sample_brand ILIKE :device_brand)")
+                params["device_brand"] = f"%{filters['device_brand']}%"
+            
+            if filters.get("device_year"):
+                filter_conditions.append("d.device_year = :device_year")
+                params["device_year"] = filters["device_year"]
+            
+            if filters.get("device_condition"):
+                filter_conditions.append("d.device_condition = :device_condition")
+                params["device_condition"] = filters["device_condition"]
+            
+            if filters.get("device_status"):
+                filter_conditions.append("d.device_status = :device_status")
+                params["device_status"] = filters["device_status"]
+            
+            if filters.get("min_usage_days") is not None:
+                filter_conditions.append("COALESCE(usage_stats.total_usage_days, 0) >= :min_usage_days")
+                params["min_usage_days"] = filters["min_usage_days"]
+            
+            if filters.get("max_usage_days") is not None:
+                filter_conditions.append("COALESCE(usage_stats.total_usage_days, 0) <= :max_usage_days")
+                params["max_usage_days"] = filters["max_usage_days"]
+            
+            if filters.get("min_loans") is not None:
+                filter_conditions.append("COALESCE(usage_stats.total_loans, 0) >= :min_loans")
+                params["min_loans"] = filters["min_loans"]
+            
+            if filters.get("last_used_from"):
+                filter_conditions.append("usage_stats.last_used_date >= :last_used_from")
+                params["last_used_from"] = filters["last_used_from"]
+            
+            if filters.get("last_used_to"):
+                filter_conditions.append("usage_stats.last_used_date <= :last_used_to")
+                params["last_used_to"] = filters["last_used_to"]
+        
+        if filter_conditions:
+            base_query += " AND " + " AND ".join(filter_conditions)
+        
+        # Count query
+        count_query = f"SELECT COUNT(*) FROM ({base_query}) as counted"
+        count_result = await self.session.execute(count_query, params)
+        total = count_result.scalar()
+        
+        # Add sorting and pagination
+        sort_by = filters.get("sort_by", "total_usage_days") if filters else "total_usage_days"
+        sort_order = filters.get("sort_order", "desc") if filters else "desc"
+        
+        # Map sort fields to actual column names
+        sort_mapping = {
+            "total_usage_days": "total_usage_days",
+            "total_loans": "total_loans",
+            "last_used_date": "last_used_date",
+            "device_name": "d.device_name",
+            "nup_device": "d.nup_device",
+            "device_year": "d.device_year",
+            "usage_frequency_score": "usage_frequency_score"
+        }
+        
+        actual_sort_field = sort_mapping.get(sort_by, "total_usage_days")
+        
+        base_query += f" ORDER BY {actual_sort_field} {sort_order.upper()}"
+        base_query += f" LIMIT {limit} OFFSET {skip}"
+        
+        # Execute main query
+        result = await self.session.execute(base_query, params)
+        devices_data = result.fetchall()
+        
+        return devices_data, total
+
+    async def get_device_usage_summary(self) -> dict:
+        """Get device usage summary statistics."""
+        from ..models.loan import DeviceLoan, DeviceLoanItem
+        
+        summary_query = """
+        SELECT 
+            COUNT(DISTINCT d.id) as total_devices,
+            COUNT(DISTINCT CASE WHEN usage_stats.total_loans > 0 THEN d.id END) as devices_with_usage,
+            COUNT(DISTINCT CASE WHEN usage_stats.total_loans = 0 OR usage_stats.total_loans IS NULL THEN d.id END) as devices_never_used,
+            COALESCE(SUM(usage_stats.total_usage_days), 0) as total_usage_days_all,
+            ROUND(AVG(COALESCE(usage_stats.total_usage_days, 0)), 2) as average_usage_per_device
+        FROM devices d
+        LEFT JOIN (
+            SELECT 
+                dli.device_id,
+                SUM(dl.usage_duration_days * dli.quantity) as total_usage_days,
+                COUNT(DISTINCT dl.id) as total_loans
+            FROM device_loan_items dli
+            JOIN device_loans dl ON dli.loan_id = dl.id
+            WHERE dl.deleted_at IS NULL 
+                AND dl.status IN ('RETURNED', 'OVERDUE', 'ACTIVE')
+            GROUP BY dli.device_id
+        ) usage_stats ON d.id = usage_stats.device_id
+        WHERE d.deleted_at IS NULL
+        """
+        
+        result = await self.session.execute(summary_query)
+        summary_data = result.fetchone()
+        
+        # Get most and least used devices
+        most_used_query = """
+        SELECT d.device_name, d.nup_device, usage_stats.total_usage_days, usage_stats.total_loans
+        FROM devices d
+        JOIN (
+            SELECT 
+                dli.device_id,
+                SUM(dl.usage_duration_days * dli.quantity) as total_usage_days,
+                COUNT(DISTINCT dl.id) as total_loans
+            FROM device_loan_items dli
+            JOIN device_loans dl ON dli.loan_id = dl.id
+            WHERE dl.deleted_at IS NULL 
+                AND dl.status IN ('RETURNED', 'OVERDUE', 'ACTIVE')
+            GROUP BY dli.device_id
+        ) usage_stats ON d.id = usage_stats.device_id
+        WHERE d.deleted_at IS NULL
+        ORDER BY usage_stats.total_usage_days DESC
+        LIMIT 1
+        """
+        
+        most_used_result = await self.session.execute(most_used_query)
+        most_used = most_used_result.fetchone()
+        
+        # Get devices by condition
+        condition_query = """
+        SELECT device_condition, COUNT(*) as count
+        FROM devices 
+        WHERE deleted_at IS NULL
+        GROUP BY device_condition
+        """
+        
+        condition_result = await self.session.execute(condition_query)
+        devices_by_condition = {row[0] or "Unknown": row[1] for row in condition_result.fetchall()}
+        
+        # Get devices by status
+        status_query = """
+        SELECT device_status, COUNT(*) as count
+        FROM devices 
+        WHERE deleted_at IS NULL
+        GROUP BY device_status
+        """
+        
+        status_result = await self.session.execute(status_query)
+        devices_by_status = {row[0] or "Unknown": row[1] for row in status_result.fetchall()}
+        
+        # Get usage by year
+        year_query = """
+        SELECT d.device_year, COALESCE(SUM(usage_stats.total_usage_days), 0) as total_usage
+        FROM devices d
+        LEFT JOIN (
+            SELECT 
+                dli.device_id,
+                SUM(dl.usage_duration_days * dli.quantity) as total_usage_days
+            FROM device_loan_items dli
+            JOIN device_loans dl ON dli.loan_id = dl.id
+            WHERE dl.deleted_at IS NULL 
+                AND dl.status IN ('RETURNED', 'OVERDUE', 'ACTIVE')
+            GROUP BY dli.device_id
+        ) usage_stats ON d.id = usage_stats.device_id
+        WHERE d.deleted_at IS NULL AND d.device_year IS NOT NULL
+        GROUP BY d.device_year
+        ORDER BY d.device_year DESC
+        """
+        
+        year_result = await self.session.execute(year_query)
+        usage_by_year = {str(row[0]): int(row[1]) for row in year_result.fetchall()}
+        
+        return {
+            "total_devices": summary_data[0],
+            "devices_with_usage": summary_data[1],
+            "devices_never_used": summary_data[2],
+            "total_usage_days_all": int(summary_data[3]),
+            "average_usage_per_device": float(summary_data[4]),
+            "most_used_device": {
+                "device_name": most_used[0],
+                "nup_device": most_used[1],
+                "total_usage_days": int(most_used[2]),
+                "total_loans": int(most_used[3])
+            } if most_used else None,
+            "least_used_device": None,  # Could be implemented if needed
+            "devices_by_condition": devices_by_condition,
+            "devices_by_status": devices_by_status,
+            "usage_by_year": usage_by_year
+        }

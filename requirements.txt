@@ -43,5 +43,8 @@ pyotp==2.9.0
 qrcode[pil]==7.4.2
 slowapi==0.1.9
 
+# PDF generation
+reportlab==4.0.4
+
 # Future additions:
 # sib-api-v3-sdk - for Brevo email service (Step 5)

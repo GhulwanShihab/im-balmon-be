@@ -38,6 +38,10 @@ class User(BaseModel, SQLModel, table=True):
     # Relationships
     roles: List["UserRole"] = Relationship(back_populates="user")
     backup_codes: List["MFABackupCode"] = Relationship(back_populates="user")
+    loans: List["DeviceLoan"] = Relationship(
+        back_populates="borrower",
+        sa_relationship_kwargs={"foreign_keys": "DeviceLoan.borrower_user_id"}
+    )
     
     def is_locked(self) -> bool:
         """Check if account is currently locked."""

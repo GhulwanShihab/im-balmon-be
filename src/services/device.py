@@ -6,7 +6,8 @@ from fastapi import HTTPException, status
 from src.repositories.device import DeviceRepository
 from src.schemas.device import (
     DeviceCreate, DeviceUpdate, DeviceResponse, DeviceListResponse,
-    DeviceConditionUpdate, DeviceStatusUpdate
+    DeviceConditionUpdate, DeviceStatusUpdate, DeviceUsageStatistics,
+    DeviceUsageFilter, DeviceUsageListResponse, DeviceUsageSummary
 )
 
 
@@ -175,3 +176,147 @@ class DeviceService:
         """Get devices by type."""
         filters = {"device_type": device_type}
         return await self.get_all_devices(skip, limit, filters)
+
+    async def get_device_usage_statistics(self, usage_filter: DeviceUsageFilter) -> DeviceUsageListResponse:
+        """Get device usage statistics with filtering and pagination."""
+        
+        # Convert filter object to dict for repository
+        filters = {}
+        if usage_filter.device_name:
+            filters["device_name"] = usage_filter.device_name
+        if usage_filter.nup_device:
+            filters["nup_device"] = usage_filter.nup_device
+        if usage_filter.device_brand:
+            filters["device_brand"] = usage_filter.device_brand
+        if usage_filter.device_year:
+            filters["device_year"] = usage_filter.device_year
+        if usage_filter.device_condition:
+            filters["device_condition"] = usage_filter.device_condition
+        if usage_filter.device_status:
+            filters["device_status"] = usage_filter.device_status
+        if usage_filter.min_usage_days is not None:
+            filters["min_usage_days"] = usage_filter.min_usage_days
+        if usage_filter.max_usage_days is not None:
+            filters["max_usage_days"] = usage_filter.max_usage_days
+        if usage_filter.min_loans is not None:
+            filters["min_loans"] = usage_filter.min_loans
+        if usage_filter.last_used_from:
+            filters["last_used_from"] = usage_filter.last_used_from
+        if usage_filter.last_used_to:
+            filters["last_used_to"] = usage_filter.last_used_to
+        
+        filters["sort_by"] = usage_filter.sort_by
+        filters["sort_order"] = usage_filter.sort_order
+        
+        # Calculate skip
+        skip = (usage_filter.page - 1) * usage_filter.page_size
+        
+        # Get data from repository
+        devices_data, total = await self.device_repo.get_device_usage_statistics(
+            filters=filters, 
+            skip=skip, 
+            limit=usage_filter.page_size
+        )
+        
+        # Convert to response objects
+        devices_stats = []
+        for row in devices_data:
+            device_stat = DeviceUsageStatistics(
+                device_id=row[0],
+                nup_device=row[1],
+                device_name=row[2],
+                device_brand=row[3],
+                device_year=row[4],
+                device_condition=row[5],
+                device_status=row[6],
+                total_usage_days=row[7],
+                total_loans=row[8],
+                last_used_date=row[9],
+                last_borrower=row[10],
+                last_activity=row[11],
+                average_usage_per_loan=float(row[12]) if row[12] else 0.0,
+                usage_frequency_score=float(row[13]) if row[13] else 0.0
+            )
+            devices_stats.append(device_stat)
+        
+        # Get summary statistics
+        summary = await self.device_repo.get_device_usage_summary()
+        
+        # Calculate total pages
+        total_pages = (total + usage_filter.page_size - 1) // usage_filter.page_size
+        
+        return DeviceUsageListResponse(
+            devices=devices_stats,
+            total=total,
+            page=usage_filter.page,
+            page_size=usage_filter.page_size,
+            total_pages=total_pages,
+            summary=summary
+        )
+
+    async def get_device_usage_summary(self) -> DeviceUsageSummary:
+        """Get device usage summary statistics."""
+        summary_data = await self.device_repo.get_device_usage_summary()
+        
+        return DeviceUsageSummary(
+            total_devices=summary_data["total_devices"],
+            devices_with_usage=summary_data["devices_with_usage"],
+            devices_never_used=summary_data["devices_never_used"],
+            total_usage_days_all=summary_data["total_usage_days_all"],
+            average_usage_per_device=summary_data["average_usage_per_device"],
+            most_used_device=summary_data["most_used_device"],
+            least_used_device=summary_data["least_used_device"],
+            devices_by_condition=summary_data["devices_by_condition"],
+            devices_by_status=summary_data["devices_by_status"],
+            usage_by_year=summary_data["usage_by_year"]
+        )
+
+    async def get_never_used_devices(self) -> list[DeviceResponse]:
+        """Get list of devices that have never been used in loans."""
+        filters = {"min_loans": 0, "max_loans": 0}
+        devices_data, _ = await self.device_repo.get_device_usage_statistics(
+            filters=filters, 
+            skip=0, 
+            limit=1000
+        )
+        
+        never_used_devices = []
+        for row in devices_data:
+            if row[8] == 0:  # total_loans is 0
+                device = await self.device_repo.get_by_id(row[0])
+                if device:
+                    never_used_devices.append(DeviceResponse.model_validate(device))
+        
+        return never_used_devices
+
+    async def get_most_used_devices(self, limit: int = 10) -> list[DeviceUsageStatistics]:
+        """Get most used devices based on total usage days."""
+        filters = {"sort_by": "total_usage_days", "sort_order": "desc"}
+        devices_data, _ = await self.device_repo.get_device_usage_statistics(
+            filters=filters, 
+            skip=0, 
+            limit=limit
+        )
+        
+        most_used = []
+        for row in devices_data:
+            if row[7] > 0:  # total_usage_days > 0
+                device_stat = DeviceUsageStatistics(
+                    device_id=row[0],
+                    nup_device=row[1],
+                    device_name=row[2],
+                    device_brand=row[3],
+                    device_year=row[4],
+                    device_condition=row[5],
+                    device_status=row[6],
+                    total_usage_days=row[7],
+                    total_loans=row[8],
+                    last_used_date=row[9],
+                    last_borrower=row[10],
+                    last_activity=row[11],
+                    average_usage_per_loan=float(row[12]) if row[12] else 0.0,
+                    usage_frequency_score=float(row[13]) if row[13] else 0.0
+                )
+                most_used.append(device_stat)
+        
+        return most_used

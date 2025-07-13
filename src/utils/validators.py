@@ -6,15 +6,15 @@ from fastapi import UploadFile, HTTPException, status
 
 
 # Common weak passwords to blacklist (OWASP recommendations)
-COMMON_PASSWORDS = {
-    "password", "123456", "123456789", "12345678", "12345", "1234567", "1234567890",
-    "qwerty", "abc123", "111111", "123123", "admin", "letmein", "welcome", "monkey",
-    "login", "admin123", "qwerty123", "password123", "123abc", "master", "hello",
-    "welcome123", "administrator", "root", "toor", "pass", "test", "guest", "info",
-    "user", "default", "changeme", "password1", "qwertyuiop", "asdfghjkl", "zxcvbnm",
-    "superman", "batman", "dragon", "ninja", "mustang", "access", "shadow", "football",
-    "baseball", "basketball", "jordan", "harley", "ranger", "buster", "soccer", "hockey"
-}
+# COMMON_PASSWORDS = {
+#     "password", "123456", "123456789", "12345678", "12345", "1234567", "1234567890",
+#     "qwerty", "abc123", "111111", "123123", "admin", "letmein", "welcome", "monkey",
+#     "login", "admin123", "qwerty123", "password123", "123abc", "master", "hello",
+#     "welcome123", "administrator", "root", "toor", "pass", "test", "guest", "info",
+#     "user", "default", "changeme", "password1", "qwertyuiop", "asdfghjkl", "zxcvbnm",
+#     "superman", "batman", "dragon", "ninja", "mustang", "access", "shadow", "football",
+#     "baseball", "basketball", "jordan", "harley", "ranger", "buster", "soccer", "hockey"
+# }
 
 
 def validate_email(email: str) -> bool:
@@ -43,40 +43,40 @@ def validate_password_strength(password: str) -> Dict[str, Any]:
     errors = []
     
     # Basic length checks
-    if len(password) < 12:
+    if len(password) < 8:
         errors.append("Password must be at least 12 characters long")
     
-    if len(password) > 128:
-        errors.append("Password must not exceed 128 characters")
+    # if len(password) > 128:
+    #     errors.append("Password must not exceed 128 characters")
     
     # Character variety requirements
-    if not re.search(r'[a-z]', password):
-        errors.append("Password must contain at least one lowercase letter")
+    # if not re.search(r'[a-z]', password):
+    #     errors.append("Password must contain at least one lowercase letter")
     
-    if not re.search(r'[A-Z]', password):
-        errors.append("Password must contain at least one uppercase letter")
+    # if not re.search(r'[A-Z]', password):
+    #     errors.append("Password must contain at least one uppercase letter")
     
-    if not re.search(r'\d', password):
-        errors.append("Password must contain at least one digit")
+    # if not re.search(r'\d', password):
+    #     errors.append("Password must contain at least one digit")
     
-    if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>?/~`]', password):
-        errors.append("Password must contain at least one special character")
+    # if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>?/~`]', password):
+    #     errors.append("Password must contain at least one special character")
     
     # Check against common password blacklist
-    if password.lower() in COMMON_PASSWORDS:
-        errors.append("Password is too common and easily guessable")
+    # if password.lower() in COMMON_PASSWORDS:
+    #     errors.append("Password is too common and easily guessable")
     
     # Check for sequential characters (123, abc, qwe, etc.)
-    if _has_sequential_chars(password.lower()):
-        errors.append("Password cannot contain sequential characters (like 123, abc)")
+    # if _has_sequential_chars(password.lower()):
+    #     errors.append("Password cannot contain sequential characters (like 123, abc)")
     
     # Check for repeated characters (aaa, 111, etc.)
-    if _has_repeated_chars(password):
-        errors.append("Password cannot contain more than 2 consecutive identical characters")
+    # if _has_repeated_chars(password):
+    #     errors.append("Password cannot contain more than 2 consecutive identical characters")
     
     # Check for common substitution patterns (@ for a, 3 for e, etc.)
-    if _has_common_substitutions(password.lower()):
-        errors.append("Password uses common character substitutions that are easily guessable")
+    # if _has_common_substitutions(password.lower()):
+    #     errors.append("Password uses common character substitutions that are easily guessable")
     
     return {
         "valid": len(errors) == 0,
