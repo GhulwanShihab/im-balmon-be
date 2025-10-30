@@ -1,7 +1,9 @@
 """Device service for business logic."""
 
 from typing import Optional
-from fastapi import HTTPException, status
+from fastapi import UploadFile, HTTPException, status
+from datetime import datetime
+import os
 
 from src.repositories.device import DeviceRepository
 from src.schemas.device import (
@@ -10,6 +12,10 @@ from src.schemas.device import (
     DeviceUsageFilter, DeviceUsageListResponse, DeviceUsageSummary
 )
 
+# ✅ Tambahkan ini di atas
+# BASE_DIR mengarah ke root folder project (bukan src)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "devices")
 
 class DeviceService:
     def __init__(self, device_repo: DeviceRepository):
@@ -25,13 +31,14 @@ class DeviceService:
                 detail="Device code already exists"
             )
         
-        # Check if NUP already exists
-        existing_nup = await self.device_repo.get_by_nup(device_data.nup_device)
-        if existing_nup:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="NUP device already exists"
-            )
+        # Check if NUP already exists (only if provided)
+        #if device_data.nup_device:
+            #existing_nup = await self.device_repo.get_by_nup(device_data.nup_device)
+            #if existing_nup:
+                #raise HTTPException(
+                    #status_code=status.HTTP_400_BAD_REQUEST,
+                    #detail="NUP device already exists"
+                #)
         
         # Create device
         device = await self.device_repo.create(device_data)
@@ -40,6 +47,7 @@ class DeviceService:
     async def get_device(self, device_id: int) -> Optional[DeviceResponse]:
         """Get device by ID."""
         device = await self.device_repo.get_by_id(device_id)
+        print("DEBUG DEVICE PHOTOS_URL:", device.photos_url)
         if not device:
             return None
         
@@ -98,15 +106,14 @@ class DeviceService:
                     detail="Device code already exists"
                 )
         
-        # Check if NUP is being updated and already exists
-        if device_data.nup_device and device_data.nup_device != existing_device.nup_device:
-            existing_nup = await self.device_repo.get_by_nup(device_data.nup_device)
-            if existing_nup:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="NUP device already exists"
-                )
-        
+        #if device_data.nup_device and device_data.nup_device != existing_device.nup_device:
+            #existing_nup = await self.device_repo.get_by_nup(device_data.nup_device)
+            #if existing_nup:
+                #raise HTTPException(
+                    #status_code=status.HTTP_400_BAD_REQUEST,
+                    #detail="NUP device already exists"
+                #)
+
         device = await self.device_repo.update(device_id, device_data)
         if not device:
             raise HTTPException(
@@ -117,7 +124,7 @@ class DeviceService:
         return DeviceResponse.model_validate(device)
 
     async def delete_device(self, device_id: int) -> bool:
-        """Delete device (soft delete)."""
+        """Delete device (hard delete)."""
         success = await self.device_repo.delete(device_id)
         if not success:
             raise HTTPException(
@@ -125,6 +132,7 @@ class DeviceService:
                 detail="Device not found"
             )
         return success
+
 
     async def get_device_stats(self) -> dict:
         """Get device statistics."""
@@ -318,5 +326,93 @@ class DeviceService:
                     usage_frequency_score=float(row[13]) if row[13] else 0.0
                 )
                 most_used.append(device_stat)
+        return most_used
+    
+    async def upload_device_photo(self, device_id: int, file: UploadFile):
+        """Upload foto perangkat dan ganti foto lama sepenuhnya."""
+        device = await self.device_repo.get_by_id(device_id)
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+    
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+        # Validasi tipe file
+        allowed_exts = [".jpg", ".jpeg", ".png", ".webp"]
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_exts:
+            raise HTTPException(status_code=400, detail="Only JPG, PNG, and WEBP formats are allowed")
+    
+        # 🔥 Hapus semua foto lama sebelum upload baru
+        if device.photos_url:
+            for old_path in device.photos_url:
+                abs_old_path = os.path.join(os.getcwd(), old_path.lstrip("/"))
+                if os.path.exists(abs_old_path):
+                    os.remove(abs_old_path)
+    
+        # Simpan dengan nama unik
+        filename = f"{device.device_code}_{int(datetime.utcnow().timestamp())}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+    
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+    
+        # 🔁 Ganti dengan foto baru
+        rel_path = f"/static/uploads/devices/{filename}"
+        device.photos_url = [rel_path]  # <- replace total, bukan append
+    
+        # Update database
+        from src.schemas.device import DeviceUpdate
+        await self.device_repo.update(device_id, DeviceUpdate(photos_url=device.photos_url))
+    
+        # Ambil ulang device terbaru agar data return sudah update
+        updated_device = await self.device_repo.get_by_id(device_id)
+        return updated_device
+
+
+
+    async def delete_device_photo(self, device_id: int, filename: str):
+        """Hapus satu foto perangkat berdasarkan filename."""
+        device = await self.device_repo.get_by_id(device_id)
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Cari file di list photos_url
+        if not device.photos_url:
+            raise HTTPException(status_code=404, detail="No photos to delete")
+
+        new_photos = []
+        deleted_path = None
+        for path in device.photos_url:
+            if filename in path:
+                deleted_path = path
+            else:
+                new_photos.append(path)
+
+        if not deleted_path:
+            raise HTTPException(status_code=404, detail="Photo not found")
+
+        # Hapus file fisik
+        abs_path = os.path.join(BASE_DIR, deleted_path.lstrip("/"))
+        if os.path.exists(abs_path):
+            os.remove(abs_path)
+
+        # Update field photos_url di database
+        device.photos_url = new_photos
+        from src.schemas.device import DeviceUpdate
+        await self.device_repo.update(device_id, DeviceUpdate(photos_url=device.photos_url))
+
+        # ✅ Muat ulang device terbaru dari database agar response up to date
+        updated_device = await self.device_repo.get_by_id(device_id)
+
+        return updated_device
+
+
+    async def get_device_photos(self, device_id: int):
+        """Ambil semua foto dari perangkat tertentu."""
+        device = await self.device_repo.get_by_id(device_id)
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+        return device.photos_url or []
         
         return most_used

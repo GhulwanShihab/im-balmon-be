@@ -2,7 +2,9 @@
 
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+from sqlmodel import Field, SQLModel, Column, JSON
 from datetime import datetime, date
+from src.schemas.device_child import DeviceChildResponse
 
 
 class DeviceBase(BaseModel):
@@ -19,7 +21,7 @@ class DeviceBase(BaseModel):
     device_status: Optional[str] = Field(None, max_length=50, description="Status perangkat")
     description: Optional[str] = Field(None, description="Deskripsi perangkat")
     device_room: Optional[str] = Field(None, max_length=100, description="Ruangan perangkat")
-    photos_url: List[str] = Field(default=[], description="URL foto perangkat")
+    photos_url: List[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False, default='[]'), description="URL foto perangkat")
 
 
 class DeviceCreate(DeviceBase):
@@ -45,11 +47,12 @@ class DeviceUpdate(BaseModel):
 
 
 class DeviceResponse(DeviceBase):
-    """Schema for device response."""
     id: int
     created_at: datetime
     updated_at: datetime
-    
+    children: Optional[List[DeviceChildResponse]] = Field(default_factory=list)
+    photos_url: Optional[List[str]] = Field(default_factory=list)
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -78,7 +81,7 @@ class DeviceSearchFilter(BaseModel):
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
     sort_by: Optional[str] = Field(default="created_at", description="Field to sort by")
-    sort_order: str = Field(default="desc", pattern="^(asc|desc)$")
+    sort_order: str = Field(default="desc", description="Sort order: asc or desc")
 
 
 class DeviceStats(BaseModel):
@@ -139,7 +142,7 @@ class DeviceUsageFilter(BaseModel):
     last_used_from: Optional[date] = Field(None, description="Last used date from")
     last_used_to: Optional[date] = Field(None, description="Last used date to")
     sort_by: str = Field(default="total_usage_days", description="Field to sort by")
-    sort_order: str = Field(default="desc", pattern="^(asc|desc)$")
+    sort_order: str = Field(default="desc", description="Sort order: asc or desc")
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 

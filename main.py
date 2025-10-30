@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.core.config import settings
 from src.core.database import init_db
@@ -16,7 +17,6 @@ from src.utils.logging import setup_logging
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -70,6 +70,9 @@ def create_application() -> FastAPI:
 
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_STR)
+
+    # ✅ Mount static folder (for serving uploaded files)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
     @app.get("/")
     async def root():

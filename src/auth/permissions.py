@@ -1,6 +1,6 @@
 """Authorization and permission checking."""
 
-from typing import List, Dict, Optional
+from typing import List, Dict
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
@@ -66,9 +66,7 @@ async def get_current_user(
         user_data = {
             "id": user.id,
             "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "name": f"{user.first_name} {user.last_name or ''}".strip(),
+            "username": user.username,
             "roles": roles,
             "is_active": user.is_active,
         }
@@ -114,6 +112,7 @@ def require_roles(required_roles: List[str]):
 # Common role dependencies
 admin_required = require_roles(["admin"])
 user_required = require_roles(["user", "admin"])
+
 
 async def require_admin(
     current_user: Dict = Depends(get_current_active_user),

@@ -3,37 +3,58 @@
 from typing import List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_, update, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
-from src.models.perangkat import Device
+from src.models.perangkat import Device, DeviceStatus
+from src.models.device_child import DeviceChild
+from src.models.loan import DeviceCondition
 from src.schemas.device import DeviceCreate, DeviceUpdate
+import os
 
+def no_deleted_filter(query):
+    """Remove any deleted_at filter safely (for hard delete mode)."""
+    return query
 
 class DeviceRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, device_id: int) -> Optional[Device]:
-        """Get device by ID."""
-        query = select(Device).where(
-            and_(Device.id == device_id, Device.deleted_at.is_(None))
-        )
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none()
+    async def get_by_id(self, device_id: int):
+        """Get device or device_child by ID."""
+        print(f"🔍 [DeviceRepo] mencari device_id={device_id}")
+
+        # Cari di tabel devices dulu
+        query_device = select(Device).where(Device.id == device_id)
+        result_device = await self.session.execute(query_device)
+        device = result_device.scalar_one_or_none()
+
+        if device:
+            print(f"✅ [DeviceRepo] ditemukan di devices: {device.device_name}")
+            return device
+
+        # Kalau tidak ada, cek di tabel device_children
+        query_child = select(DeviceChild).where(DeviceChild.id == device_id)
+        result_child = await self.session.execute(query_child)
+        child = result_child.scalar_one_or_none()
+
+        if child:
+            print(f"✅ [DeviceRepo] ditemukan di device_children: {child.device_name}")
+            return child
+
+        print("❌ [DeviceRepo] tidak ditemukan di devices maupun device_children")
+        return None
 
     async def get_by_code(self, device_code: str) -> Optional[Device]:
         """Get device by code."""
-        query = select(Device).where(
-            and_(Device.device_code == device_code, Device.deleted_at.is_(None))
-        )
+        query = select(Device).where(Device.device_code == device_code)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
     async def get_by_nup(self, nup_device: str) -> Optional[Device]:
         """Get device by NUP."""
-        query = select(Device).where(
-            and_(Device.nup_device == nup_device, Device.deleted_at.is_(None))
-        )
+        query = select(Device).where(Device.nup_device == nup_device)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -52,7 +73,7 @@ class DeviceRepository:
             device_status=device_data.device_status,
             description=device_data.description,
             device_room=device_data.device_room,
-            photos_url=device_data.photos_url,
+            photos_url=device_data.photos_url or [],
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -61,35 +82,66 @@ class DeviceRepository:
         await self.session.refresh(device)
         return device
 
-    async def update(self, device_id: int, device_data: DeviceUpdate) -> Optional[Device]:
-        """Update device."""
+    async def update(self, device_id: int, device_data) -> Optional[Device]:
         device = await self.get_by_id(device_id)
         if not device:
             return None
 
-        update_data = device_data.model_dump(exclude_unset=True)
+        if isinstance(device_data, dict):
+            update_data = device_data
+        else:
+            update_data = device_data.model_dump(exclude_unset=True)
+
         for key, value in update_data.items():
+
+            # ✅ khusus device_condition → konversi ke Enum
+            if key == "device_condition":
+                if isinstance(value, str):
+                    try:
+                        value = DeviceCondition(value)  # ✅ convert string ke enum
+                    except ValueError:
+                        print("❌ Invalid condition string:", value)
+                        continue
+
+                setattr(device, key, value)  # set enum, bukan string
+                continue
+
+            # ✅ JSON
+            if key == "photos_url":
+                setattr(device, key, value)
+                flag_modified(device, "photos_url")
+                continue
+
             setattr(device, key, value)
 
         device.updated_at = datetime.utcnow()
         await self.session.commit()
         await self.session.refresh(device)
+        print("🔧 Before:", device.device_condition)
+        print("➡ New:", update_data.get("device_condition"))
         return device
 
     async def delete(self, device_id: int) -> bool:
-        """Soft delete device."""
-        query = (
-            update(Device)
-            .where(Device.id == device_id)
-            .values(deleted_at=datetime.utcnow(), updated_at=datetime.utcnow())
-        )
-        result = await self.session.execute(query)
+        """Hard delete device: hapus dari DB dan hapus semua foto fisik."""
+        device = await self.get_by_id(device_id)
+        if not device:
+            return False
+
+        # 🧹 Hapus file foto jika ada
+        if device.photos_url:
+            for path in device.photos_url:
+                abs_path = os.path.join(os.getcwd(), path.lstrip("/"))
+                if os.path.exists(abs_path):
+                    os.remove(abs_path)
+
+        # 🧨 Hapus device dari database (bukan soft delete)
+        await self.session.delete(device)
         await self.session.commit()
-        return result.rowcount > 0
+        return True
 
     async def get_all(self, skip: int = 0, limit: int = 10, filters: dict = None, sort_by: str = "created_at", sort_order: str = "desc") -> List[Device]:
         """Get all devices with pagination and filtering."""
-        query = select(Device).where(Device.deleted_at.is_(None))
+        query = select(Device).options(selectinload(Device.children))
         
         # Apply filters
         if filters:
@@ -127,11 +179,11 @@ class DeviceRepository:
         query = query.offset(skip).limit(limit)
         
         result = await self.session.execute(query)
-        return result.scalars().all()
+        return result.scalars().unique().all()
 
     async def count(self, filters: dict = None) -> int:
         """Count total devices with filters."""
-        query = select(func.count(Device.id)).where(Device.deleted_at.is_(None))
+        query = select(func.count(Device.id))
         
         # Apply filters
         if filters:
@@ -164,14 +216,12 @@ class DeviceRepository:
     async def get_stats(self) -> dict:
         """Get comprehensive device statistics."""
         # Total devices
-        total_query = select(func.count(Device.id)).where(Device.deleted_at.is_(None))
+        total_query = select(func.count(Device.id))
         total_result = await self.session.execute(total_query)
         total_devices = total_result.scalar()
         
         # Active devices (assuming 'Aktif' status means active)
-        active_query = select(func.count(Device.id)).where(
-            and_(Device.deleted_at.is_(None), Device.device_status == "Aktif")
-        )
+        active_query = select(func.count(Device.id)).where(Device.device_status == DeviceStatus.TERSEDIA)
         active_result = await self.session.execute(active_query)
         active_devices = active_result.scalar()
         
@@ -179,30 +229,22 @@ class DeviceRepository:
         inactive_devices = total_devices - active_devices
         
         # Devices by condition
-        condition_query = select(Device.device_condition, func.count(Device.id)).where(
-            Device.deleted_at.is_(None)
-        ).group_by(Device.device_condition)
+        condition_query = select(Device.device_condition, func.count(Device.id)).group_by(Device.device_condition)
         condition_result = await self.session.execute(condition_query)
         devices_by_condition = {row[0] or "Unknown": row[1] for row in condition_result.fetchall()}
         
         # Devices by status
-        status_query = select(Device.device_status, func.count(Device.id)).where(
-            Device.deleted_at.is_(None)
-        ).group_by(Device.device_status)
+        status_query = select(Device.device_status, func.count(Device.id)).group_by(Device.device_status)
         status_result = await self.session.execute(status_query)
         devices_by_status = {row[0] or "Unknown": row[1] for row in status_result.fetchall()}
         
         # Devices by type
-        type_query = select(Device.device_type, func.count(Device.id)).where(
-            Device.deleted_at.is_(None)
-        ).group_by(Device.device_type)
+        type_query = select(Device.device_type, func.count(Device.id)).group_by(Device.device_type)
         type_result = await self.session.execute(type_query)
         devices_by_type = {row[0] or "Unknown": row[1] for row in type_result.fetchall()}
         
         # Devices by room
-        room_query = select(Device.device_room, func.count(Device.id)).where(
-            Device.deleted_at.is_(None)
-        ).group_by(Device.device_room)
+        room_query = select(Device.device_room, func.count(Device.id)).group_by(Device.device_room)
         room_result = await self.session.execute(room_query)
         devices_by_room = {row[0] or "Unknown": row[1] for row in room_result.fetchall()}
         
@@ -212,23 +254,17 @@ class DeviceRepository:
         month_ago = datetime.utcnow() - timedelta(days=30)
         
         # New devices today
-        today_query = select(func.count(Device.id)).where(
-            and_(Device.deleted_at.is_(None), func.date(Device.created_at) == today)
-        )
+        today_query = select(func.count(Device.id)).where(func.date(Device.created_at) == today)
         today_result = await self.session.execute(today_query)
         new_devices_today = today_result.scalar()
         
         # New devices this week
-        week_query = select(func.count(Device.id)).where(
-            and_(Device.deleted_at.is_(None), Device.created_at >= week_ago)
-        )
+        week_query = select(func.count(Device.id)).where(Device.created_at >= week_ago)
         week_result = await self.session.execute(week_query)
         new_devices_this_week = week_result.scalar()
         
         # New devices this month
-        month_query = select(func.count(Device.id)).where(
-            and_(Device.deleted_at.is_(None), Device.created_at >= month_ago)
-        )
+        month_query = select(func.count(Device.id)).where(Device.created_at >= month_ago)
         month_result = await self.session.execute(month_query)
         new_devices_this_month = month_result.scalar()
         
@@ -245,17 +281,44 @@ class DeviceRepository:
             "new_devices_this_month": new_devices_this_month
         }
 
-    async def update_condition(self, device_id: int, condition: str) -> Optional[Device]:
-        """Update device condition."""
+    async def update_condition(self, device_id: int, condition: DeviceCondition) -> Optional[Device]:
+        """Update device condition (used after admin approval)."""
         device = await self.get_by_id(device_id)
         if not device:
             return None
-        
-        device.device_condition = condition
+
+        # pastikan enum-nya tersimpan sebagai string yang sesuai dengan kolom database
+        device.device_condition = condition.value if isinstance(condition, DeviceCondition) else condition
         device.updated_at = datetime.utcnow()
+
+        self.session.add(device)
         await self.session.commit()
         await self.session.refresh(device)
         return device
+
+    async def update_child_condition(self, child_device_id: int, condition: DeviceCondition) -> Optional[DeviceChild]:
+        """Update condition for device child (used after admin approval)."""
+        print(f"🔧 [DeviceRepo] update_child_condition: child_device_id={child_device_id}, condition={condition}")
+
+        # cari data child
+        query = select(DeviceChild).where(DeviceChild.id == child_device_id)
+        result = await self.session.execute(query)
+        child = result.scalar_one_or_none()
+
+        if not child:
+            print("❌ [DeviceRepo] child device tidak ditemukan")
+            return None
+
+        # pastikan enum-nya tersimpan sebagai string
+        child.device_condition = condition.value if isinstance(condition, DeviceCondition) else condition
+        child.updated_at = datetime.utcnow()
+
+        self.session.add(child)
+        await self.session.commit()
+        await self.session.refresh(child)
+
+        print(f"✅ [DeviceRepo] child device {child.device_name} diperbarui ke kondisi {child.device_condition}")
+        return child
 
     async def update_status(self, device_id: int, status: str) -> Optional[Device]:
         """Update device status."""
@@ -271,17 +334,18 @@ class DeviceRepository:
 
     async def search_devices(self, search_term: str, limit: int = 10) -> List[Device]:
         """Search devices by name, code, or NUP."""
-        query = select(Device).where(
-            and_(
-                Device.deleted_at.is_(None),
+        query = (
+            select(Device)
+            .where(
                 (
-                    Device.device_name.ilike(f"%{search_term}%") |
-                    Device.device_code.ilike(f"%{search_term}%") |
-                    Device.nup_device.ilike(f"%{search_term}%")
+                    Device.device_name.ilike(f"%{search_term}%")
+                    | Device.device_code.ilike(f"%{search_term}%")
+                    | Device.nup_device.ilike(f"%{search_term}%")
                 )
             )
-        ).limit(limit)
-        
+            .limit(limit)
+        )
+
         result = await self.session.execute(query)
         return result.scalars().all()
 
@@ -528,3 +592,31 @@ class DeviceRepository:
             "devices_by_status": devices_by_status,
             "usage_by_year": usage_by_year
         }
+    
+    async def update_parent_status_based_on_children(self, parent_id: int):
+        """Update parent status based on children statuses."""
+        parent = await self.get_by_id(parent_id)
+        if not parent:
+            return None
+
+        # Ambil semua children parent
+        query = select(DeviceChild).where(DeviceChild.parent_id == parent_id)
+        result = await self.session.execute(query)
+        children = result.scalars().all()
+
+        if not children:
+            # kalau tidak ada child, biarkan status parent tetap
+            return parent
+
+        # Kalau ada minimal 1 child TERSEDIA, parent TERSEDIA
+        if any(child.device_status == DeviceStatus.TERSEDIA for child in children):
+            parent.device_status = DeviceStatus.TERSEDIA
+        else:
+            # Semua dipinjam/maintenance/nonaktif, parent DIPINJAM
+            parent.device_status = DeviceStatus.DIPINJAM
+
+        parent.updated_at = datetime.utcnow()
+        self.session.add(parent)
+        await self.session.commit()
+        await self.session.refresh(parent)
+        return parent

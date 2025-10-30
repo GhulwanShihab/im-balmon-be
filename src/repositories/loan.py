@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from ..models.loan import DeviceLoan, DeviceLoanItem, LoanHistory, LoanStatus
 from ..models.perangkat import Device
+from ..models.device_child import DeviceChild
 from ..models.user import User
 from ..schemas.loan import DeviceLoanCreate, DeviceLoanUpdate, DeviceLoanFilter
 
@@ -82,13 +83,9 @@ class LoanRepository:
 
     async def create(self, loan_data: DeviceLoanCreate, borrower_user_id: int) -> DeviceLoan:
         """Create a new device loan."""
-        # Generate loan number
         loan_number = await self.generate_loan_number()
-        
-        # Calculate end date
         loan_end_date = loan_data.loan_start_date + timedelta(days=loan_data.usage_duration_days)
-        
-        # Create the main loan record
+    
         loan = DeviceLoan(
             loan_number=loan_number,
             assignment_letter_number=loan_data.assignment_letter_number,
@@ -104,23 +101,67 @@ class LoanRepository:
             status=LoanStatus.ACTIVE,
             created_by=borrower_user_id
         )
-        
+    
         self.session.add(loan)
-        await self.session.flush()  # Get the loan ID
-        
-        # Create loan items
+        await self.session.flush()   # dapat loan.id
+    
+        # ✅ Loop sekali saja
         for item_data in loan_data.loan_items:
+        
+            # Cek apakah device_id adalah CHILD
+            child_device = await self.session.get(DeviceChild, item_data.device_id)
+    
+            if child_device:
+                # Parent adalah parent_id dari child
+                device = await self.session.get(Device, child_device.parent_id)
+            else:
+                # Cek apakah dia parent
+                device = await self.session.get(Device, item_data.device_id)
+    
+            if not device:
+                raise ValueError(f"Device dengan ID {item_data.device_id} tidak ditemukan.")
+    
+            # ✅ Cek status parent/child
+            if device.device_status == "DIPINJAM":
+                raise ValueError(f"Perangkat '{device.device_name}' sedang dipinjam.")
+    
+            if child_device and child_device.device_status == "DIPINJAM":
+                raise ValueError(f"Child perangkat '{child_device.device_name}' sedang dipinjam.")
+    
+            # ✅ Update status
+            if child_device:
+                child_device.device_status = "DIPINJAM"
+                child_device.updated_at = datetime.utcnow()
+                self.session.add(child_device)
+            else:
+                device.device_status = "DIPINJAM"
+                device.updated_at = datetime.utcnow()
+                self.session.add(device)
+    
+            # ✅ Simpan loan item
             loan_item = DeviceLoanItem(
                 loan_id=loan.id,
-                device_id=item_data.device_id,
+                device_id=device.id,
+                child_device_id=child_device.id if child_device else None,
                 quantity=item_data.quantity,
                 condition_before=item_data.condition_before,
                 condition_notes=item_data.condition_notes,
                 created_by=borrower_user_id
             )
             self.session.add(loan_item)
-        
-        # Create initial history record
+    
+            # ✅ Jika semua child parent sudah DIPINJAM → parent ikut DIPINJAM
+            if child_device:
+                from sqlalchemy.future import select
+                result = await self.session.execute(
+                    select(DeviceChild).where(DeviceChild.parent_id == child_device.parent_id)
+                )
+                all_children = result.scalars().all()
+                if all_children and all(c.device_status == "DIPINJAM" for c in all_children):
+                    device.device_status = "DIPINJAM"
+                    self.session.add(device)
+    
+        # ✅ Simpan history
         history = LoanHistory(
             loan_id=loan.id,
             old_status=None,
@@ -130,10 +171,33 @@ class LoanRepository:
             notes="Loan automatically activated upon creation"
         )
         self.session.add(history)
-        
+    
         await self.session.commit()
         await self.session.refresh(loan)
         return await self.get_by_id(loan.id)
+    
+    async def add_history(
+        self,
+        loan_id: int,
+        old_status: Optional[LoanStatus],
+        new_status: LoanStatus,
+        change_reason: str,
+        changed_by_user_id: int,
+        notes: Optional[str] = None
+    ):
+        """Add a loan status change history entry."""
+        history = LoanHistory(
+            loan_id=loan_id,
+            old_status=old_status,
+            new_status=new_status,
+            change_reason=change_reason,
+            changed_by_user_id=changed_by_user_id,
+            notes=notes
+        )
+        self.session.add(history)
+        await self.session.commit()
+        await self.session.refresh(history)
+        return history
 
     async def update(self, loan_id: int, loan_data: DeviceLoanUpdate, updated_by: int) -> Optional[DeviceLoan]:
         """Update loan (only for active loans)."""
@@ -153,14 +217,19 @@ class LoanRepository:
         await self.session.refresh(loan)
         return loan
 
-    async def return_loan(self, loan_id: int, return_notes: Optional[str], 
-                         item_conditions: List[Dict], returned_by: int) -> Optional[DeviceLoan]:
-        """Mark loan as returned with device conditions."""
+    async def return_loan(
+        self,
+        loan_id: int,
+        return_notes: Optional[str],
+        item_conditions: List[Dict],
+        returned_by: int
+    ) -> Optional[DeviceLoan]:
+        """Mark loan as returned and update device & child statuses properly."""
+        
         loan = await self.get_by_id(loan_id)
         if not loan or loan.status != LoanStatus.ACTIVE:
             return None
-        
-        # Update loan status
+    
         old_status = loan.status
         loan.status = LoanStatus.RETURNED
         loan.actual_return_date = date.today()
@@ -168,20 +237,54 @@ class LoanRepository:
         loan.returned_by_user_id = returned_by
         loan.updated_by = returned_by
         loan.updated_at = datetime.utcnow()
-        
-        # Update item conditions
+    
+        # Update each item
         for item_condition in item_conditions:
             loan_item = next(
-                (item for item in loan.loan_items if item.id == item_condition['id']), 
+                (item for item in loan.loan_items if item.id == item_condition["id"]),
                 None
             )
-            if loan_item:
-                loan_item.condition_after = item_condition['condition_after']
-                loan_item.condition_notes = item_condition.get('condition_notes')
-                loan_item.updated_by = returned_by
-                loan_item.updated_at = datetime.utcnow()
-        
-        # Create history record
+            if not loan_item:
+                continue
+            
+            # Update condition info
+            loan_item.condition_after = item_condition.get("condition_after")
+            loan_item.condition_notes = item_condition.get("condition_notes")
+            loan_item.updated_by = returned_by
+            loan_item.updated_at = datetime.utcnow()
+    
+            # Ambil perangkat utama (parent)
+            device = await self.session.get(Device, loan_item.device_id)
+            if not device:
+                continue
+            
+            # 🔹 Cek apakah parent punya child
+            result = await self.session.execute(
+                select(DeviceChild).where(DeviceChild.parent_id == device.id)
+            )
+            children = result.scalars().all()
+    
+            if not children:
+                # 🔸 Jika tidak punya child → langsung ubah status ke TERSEDIA
+                device.device_status = "TERSEDIA"
+                device.updated_at = datetime.utcnow()
+                self.session.add(device)
+            else:
+                # 🔸 Jika punya child → ubah semua child DIPINJAM jadi TERSEDIA
+                for child in children:
+                    if child.device_status == "DIPINJAM":
+                        child.device_status = "TERSEDIA"
+                        child.updated_at = datetime.utcnow()
+                        self.session.add(child)
+    
+                # 🔸 Cek apakah semua child sudah TERSEDIA
+                all_available = all(c.device_status == "TERSEDIA" for c in children)
+                if all_available:
+                    device.device_status = "TERSEDIA"
+                    device.updated_at = datetime.utcnow()
+                    self.session.add(device)
+    
+        # Catat histori
         history = LoanHistory(
             loan_id=loan.id,
             old_status=old_status,
@@ -191,7 +294,7 @@ class LoanRepository:
             notes=return_notes
         )
         self.session.add(history)
-        
+    
         await self.session.commit()
         await self.session.refresh(loan)
         return loan
@@ -206,6 +309,14 @@ class LoanRepository:
         loan.status = LoanStatus.CANCELLED
         loan.updated_by = cancelled_by
         loan.updated_at = datetime.utcnow()
+
+        # Ubah status perangkat ke TERSEDIA
+        for item in loan.loan_items:
+            device = await self.session.get(Device, item.device_id)
+            if device:
+                device.device_status = "TERSEDIA"
+                device.updated_at = datetime.utcnow()
+                self.session.add(device)
         
         # Create history record
         history = LoanHistory(

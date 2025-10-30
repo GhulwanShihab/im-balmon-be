@@ -4,6 +4,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi import HTTPException, status
 
+from src.models.user import User
 from src.repositories.user import UserRepository
 from src.schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChange
 from src.auth.jwt import get_password_hash, verify_password
@@ -15,8 +16,7 @@ class UserService:
         self.user_repo = user_repo
 
     async def create_user(self, user_data: UserCreate) -> UserResponse:
-        """Create a new user with password validation."""
-        # Check if user exists
+        """Register new user — requires admin approval before activation."""
         existing_user = await self.user_repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(
@@ -24,44 +24,50 @@ class UserService:
                 detail="Email already registered"
             )
 
-        # Hash password
         hashed_password = get_password_hash(user_data.password)
-        
-        # Create user
         user = await self.user_repo.create(user_data, hashed_password)
-        
+
+        # pastikan user baru belum aktif dan belum diverifikasi
+        user.is_active = False
+        user.is_verified = False
+        user.password_changed_at = datetime.utcnow()
+        user.password_history = [hashed_password]
+        await self.user_repo.session.commit()
+        await self.user_repo.session.refresh(user)
+
+        # ✅ kembalikan response, bukan raise (karena raise memutus flow)
         return UserResponse.model_validate(user)
 
+
     async def authenticate_user(self, email: str, password: str) -> Optional[UserResponse]:
-        """Authenticate user with account lockout protection."""
+        """Authenticate user with account lockout and admin approval checks."""
         user = await self.user_repo.get_by_email(email)
         if not user:
             return None
         
-        # Check if account is locked
+        # Hanya user aktif & diverifikasi yang boleh login
+        if not user.is_active or not user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is not yet approved by admin."
+            )
+
         if user.is_locked():
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
                 detail="Account is temporarily locked due to too many failed login attempts"
             )
         
-        # Verify password
         if not verify_password(password, user.hashed_password):
-            # Increment failed attempts (this will auto-lock if needed)
             updated_user = await self.user_repo.increment_failed_login_attempts(user.id)
-            
-            # Check if account is now locked
             if updated_user and updated_user.is_locked():
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
                     detail=f"Account locked due to too many failed login attempts. Try again in {updated_user.lockout_duration_minutes} minutes."
                 )
-            
             return None
         
-        # Reset failed attempts on successful login
         await self.user_repo.reset_failed_login_attempts(user.id)
-        
         return UserResponse.model_validate(user)
 
     async def get_user(self, user_id: int) -> Optional[UserResponse]:
@@ -243,3 +249,30 @@ class UserService:
         roles = await self.user_repo.get_all_roles()
         from src.schemas.user import RoleResponse
         return [RoleResponse.model_validate(role) for role in roles]
+
+    async def get_by_username(self, username: str) -> Optional[User]:
+        query = select(User).where(
+            and_(User.username == username, User.deleted_at.is_(None))
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+    
+    async def reject_user(self, user_id: int):
+        user = await self.user_repo.get_by_id(user_id)  # 🔥 ganti ini
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        await self.user_repo.delete_user(user.id)
+        return {"message": "User rejected and deleted permanently"}
+
+
+    async def hard_delete_user(self, user_id: int) -> bool:
+        """Permanently delete a user (used when rejecting pending users)."""
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            return False
+
+        await self.user_repo.session.delete(user)
+        await self.user_repo.session.commit()
+        return True
+

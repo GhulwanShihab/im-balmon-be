@@ -1,6 +1,7 @@
 """Comprehensive user management endpoints."""
 
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,11 +17,19 @@ from src.auth.permissions import get_current_active_user, require_admin
 
 router = APIRouter()
 
+# --------------------------------------------------------------------------
+# Dependencies
+# --------------------------------------------------------------------------
+
 async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserService:
-    """Get user service dependency."""
+    """Dependency untuk mendapatkan service user."""
     user_repo = UserRepository(session)
     return UserService(user_repo)
 
+
+# --------------------------------------------------------------------------
+# Current user endpoints
+# --------------------------------------------------------------------------
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
@@ -53,11 +62,14 @@ async def update_current_user(
     return await user_service.update_user(current_user["id"], user_data)
 
 
+# --------------------------------------------------------------------------
+# Admin-only endpoints
+# --------------------------------------------------------------------------
+
 @router.get("/", response_model=UserListResponse, dependencies=[Depends(require_admin)])
 async def get_users(
     email: Optional[str] = Query(None, description="Filter by email"),
-    first_name: Optional[str] = Query(None, description="Filter by first name"),
-    last_name: Optional[str] = Query(None, description="Filter by last name"),
+    username: Optional[str] = Query(None, description="Filter by username"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     is_verified: Optional[bool] = Query(None, description="Filter by verified status"),
     mfa_enabled: Optional[bool] = Query(None, description="Filter by MFA status"),
@@ -71,10 +83,8 @@ async def get_users(
     filters = {}
     if email:
         filters["email"] = email
-    if first_name:
-        filters["first_name"] = first_name
-    if last_name:
-        filters["last_name"] = last_name
+    if username:
+        filters["username"] = username
     if is_active is not None:
         filters["is_active"] = is_active
     if is_verified is not None:
@@ -110,6 +120,18 @@ async def get_all_roles(
 ):
     """Get all available roles (Admin only)."""
     return await user_service.get_all_roles()
+
+
+@router.get("/pending", response_model=UserListResponse, dependencies=[Depends(require_admin)])
+async def get_pending_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Get all pending users waiting for admin approval (Admin only)."""
+    filters = {"is_active": False, "is_verified": False}
+    skip = (page - 1) * page_size
+    return await user_service.get_all_users(skip, page_size, filters, "created_at", "asc")
 
 
 @router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_admin)])
@@ -169,7 +191,18 @@ async def update_user_roles(
     user_service: UserService = Depends(get_user_service)
 ):
     """Update user roles (Admin only)."""
-    return await user_service.update_user_roles(user_id, role_data.role_ids)
+    user = await user_service.update_user_roles(user_id, role_data.role_ids)
+
+    # pastikan user aktif dan diverifikasi
+    if not user.is_verified or not user.is_active:
+        update_data = UserUpdate(
+            is_active=True,
+            is_verified=True,
+            updated_at=datetime.utcnow()
+        )
+        user = await user_service.update_user(user_id, update_data)
+
+    return user
 
 
 @router.post("/{user_id}/unlock", response_model=UserResponse, dependencies=[Depends(require_admin)])
@@ -189,3 +222,58 @@ async def delete_user(
     """Delete user (soft delete, Admin only)."""
     success = await user_service.delete_user(user_id)
     return {"message": "User deleted successfully"}
+
+
+# --------------------------------------------------------------------------
+# Approval & Rejection Endpoints
+# --------------------------------------------------------------------------
+
+@router.patch("/{user_id}/approve", response_model=UserResponse, dependencies=[Depends(require_admin)])
+async def approve_user(
+    user_id: int,
+    user_service: UserService = Depends(get_user_service)
+):
+    """Approve user registration (Admin only)."""
+    user = await user_service.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_active and user.is_verified:
+        raise HTTPException(status_code=400, detail="User already approved")
+
+    update_data = UserUpdate(
+        is_active=True,
+        is_verified=True,
+        updated_at=datetime.utcnow()
+    )
+    return await user_service.update_user(user_id, update_data)
+
+
+@router.patch("/{user_id}/reject", dependencies=[Depends(require_admin)])
+async def reject_user(
+    user_id: int,
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Reject user registration (Admin only).
+    Deletes the user permanently if still pending.
+    """
+    try:
+        user = await user_service.get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user.is_active or user.is_verified:
+            raise HTTPException(status_code=400, detail="User already approved")
+
+        # Hapus user secara permanen (bukan soft delete)
+        await user_service.hard_delete_user(user_id)
+
+        return {"message": f"User {user.email} rejected and permanently deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error rejecting user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reject user")
+

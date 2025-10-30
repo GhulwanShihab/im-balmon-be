@@ -5,8 +5,15 @@ from datetime import datetime, date
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 import re
 
-from ..models.loan import LoanStatus, DeviceCondition
+from ..models.loan import LoanStatus, DeviceCondition, ConditionChangeStatus
+from .employee import EmployeeResponse
+from .device import DeviceResponse
+from .device_child import DeviceChildResponse
 
+
+# ===============================
+# ITEM SCHEMAS
+# ===============================
 
 class DeviceLoanItemBase(BaseModel):
     """Base schema for loan items."""
@@ -24,9 +31,8 @@ class DeviceLoanItemCreate(DeviceLoanItemBase):
 class DeviceLoanItemReturn(BaseModel):
     """Schema for returning loan items."""
     id: int = Field(..., description="ID loan item")
-    condition_after: DeviceCondition = Field(..., description="Kondisi setelah dikembalikan")
+    condition_after: Optional[DeviceCondition] = Field(None, description="Kondisi setelah dikembalikan")
     condition_notes: Optional[str] = Field(None, description="Catatan kondisi setelah dikembalikan")
-
 
 class DeviceLoanItemResponse(DeviceLoanItemBase):
     """Schema for loan item response."""
@@ -35,95 +41,76 @@ class DeviceLoanItemResponse(DeviceLoanItemBase):
     condition_after: Optional[DeviceCondition]
     created_at: datetime
     updated_at: Optional[datetime]
-    
+    device: Optional[DeviceResponse]
+    child: Optional[DeviceChildResponse] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
+# ===============================
+# LOAN BASE SCHEMA (tanpa validator create)
+# ===============================
+
 class DeviceLoanBase(BaseModel):
     """Base schema for device loans."""
-    assignment_letter_number: str = Field(
-        ..., 
-        description="Nomor surat tugas - Format: XX/BALMON.18/KP.01.06/XX XX/YYYY"
-    )
+    pihak_1_id: Optional[int] = Field(None, description="ID pegawai pihak 1")
+    pihak_2_id: Optional[int] = Field(None, description="ID pegawai pihak 2")
+    assignment_letter_number: str = Field(..., description="Nomor surat tugas")
     assignment_letter_date: date = Field(..., description="Tanggal surat tugas")
     borrower_name: str = Field(..., min_length=1, max_length=255, description="Nama pengguna")
     activity_name: str = Field(..., min_length=1, max_length=255, description="Nama kegiatan")
-    usage_duration_days: int = Field(..., ge=1, le=365, description="Lama penggunaan dalam hari")
+    usage_duration_days: int = Field(..., ge=1, le=365, description="Lama penggunaan (hari)")
     loan_start_date: date = Field(..., description="Tanggal mulai peminjaman")
     purpose: Optional[str] = Field(None, max_length=1000, description="Tujuan penggunaan")
     monitoring_devices: Optional[str] = Field(None, max_length=500, description="Perangkat monitoring")
-    
-    @field_validator('assignment_letter_number')
-    @classmethod
-    def validate_assignment_letter_number(cls, v: str) -> str:
-        """
-        Validate assignment letter number format.
-        Format: XX/BALMON.18/KP.01.06/XX XX/YYYY
-        Example: 03/BALMON.18/KP.01.06/LAB 01/2025
-        """
-        if not v:
-            raise ValueError("Assignment letter number is required")
-        
-        # Regex pattern for validation
-        pattern = r'^\d+/BALMON\.18/KP\.01\.06/[A-Z0-9]+ \d+/\d{4}$'
-        
-        if not re.match(pattern, v.strip()):
-            raise ValueError(
-                "Assignment letter number format is invalid. "
-                "Required format: XX/BALMON.18/KP.01.06/XX XX/YYYY "
-                "Example: 03/BALMON.18/KP.01.06/LAB 01/2025"
-            )
-        
-        return v.strip()
-    
-    @field_validator('loan_start_date')
-    @classmethod
-    def validate_loan_start_date(cls, v: date) -> date:
-        """Validate loan start date is not in the past."""
-        if v < date.today():
-            raise ValueError("Loan start date cannot be in the past")
-        return v
-    
-    @field_validator('assignment_letter_date')
-    @classmethod
-    def validate_assignment_letter_date(cls, v: date) -> date:
-        """Validate assignment letter date is reasonable."""
-        if v > date.today():
-            raise ValueError("Assignment letter date cannot be in the future")
-        return v
 
+    # Validasi format surat tugas tetap bisa diaktifkan kalau kamu ingin
+    # @field_validator('assignment_letter_number')
+    # @classmethod
+    # def validate_assignment_letter_number(cls, v: str) -> str:
+    #     pattern = r'^\d+/BALMON\.18/KP\.01\.06/[A-Z0-9]+ \d+/\d{4}$'
+    #     if not re.match(pattern, v.strip()):
+    #         raise ValueError(
+    #             "Format nomor surat tugas salah. Contoh: 03/BALMON.18/KP.01.06/LAB 01/2025"
+    #         )
+    #     return v.strip()
+
+
+# ===============================
+# CREATE / UPDATE SCHEMAS
+# ===============================
 
 class DeviceLoanCreate(DeviceLoanBase):
     """Schema for creating a device loan."""
     loan_items: List[DeviceLoanItemCreate] = Field(..., min_length=1, description="Daftar perangkat yang dipinjam")
 
+    @field_validator('loan_start_date')
+    @classmethod
+    def validate_loan_start_date(cls, v: date) -> date:
+        """Validate loan start date is not in the past (only for create)."""
+        if v < date.today():
+            raise ValueError("Loan start date cannot be in the past")
+        return v
+
+    @field_validator('assignment_letter_date')
+    @classmethod
+    def validate_assignment_letter_date(cls, v: date) -> date:
+        """Validate assignment letter date is not in the future (only for create)."""
+        if v > date.today():
+            raise ValueError("Assignment letter date cannot be in the future")
+        return v
+
 
 class DeviceLoanUpdate(BaseModel):
-    """Schema for updating a device loan (limited fields for active loans)."""
+    """Schema for updating a device loan."""
+    pihak_1_id: Optional[int] = Field(None, description="ID pegawai pihak 1")
+    pihak_2_id: Optional[int] = Field(None, description="ID pegawai pihak 2")
     assignment_letter_number: Optional[str] = Field(None, description="Nomor surat tugas")
     assignment_letter_date: Optional[date] = Field(None, description="Tanggal surat tugas")
     borrower_name: Optional[str] = Field(None, min_length=1, max_length=255, description="Nama pengguna")
     activity_name: Optional[str] = Field(None, min_length=1, max_length=255, description="Nama kegiatan")
     purpose: Optional[str] = Field(None, max_length=1000, description="Tujuan penggunaan")
     monitoring_devices: Optional[str] = Field(None, max_length=500, description="Perangkat monitoring")
-    
-    @field_validator('assignment_letter_number')
-    @classmethod
-    def validate_assignment_letter_number(cls, v: Optional[str]) -> Optional[str]:
-        """Validate assignment letter number format if provided."""
-        if v is None:
-            return v
-        
-        pattern = r'^\d+/BALMON\.18/KP\.01\.06/[A-Z0-9]+ \d+/\d{4}$'
-        
-        if not re.match(pattern, v.strip()):
-            raise ValueError(
-                "Assignment letter number format is invalid. "
-                "Required format: XX/BALMON.18/KP.01.06/XX XX/YYYY "
-                "Example: 03/BALMON.18/KP.01.06/LAB 01/2025"
-            )
-        
-        return v.strip()
 
 
 class DeviceLoanReturn(BaseModel):
@@ -137,12 +124,18 @@ class DeviceLoanCancel(BaseModel):
     cancel_reason: str = Field(..., min_length=1, max_length=500, description="Alasan pembatalan")
 
 
+# ===============================
+# RESPONSE SCHEMAS
+# ===============================
+
 class DeviceLoanResponse(DeviceLoanBase):
     """Schema for loan response."""
     id: int
     loan_number: str
     borrower_user_id: int
     loan_end_date: date
+    pihak_1: Optional[EmployeeResponse]
+    pihak_2: Optional[EmployeeResponse]
     status: LoanStatus
     actual_return_date: Optional[date]
     return_notes: Optional[str]
@@ -150,7 +143,7 @@ class DeviceLoanResponse(DeviceLoanBase):
     loan_items: List[DeviceLoanItemResponse]
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -162,6 +155,10 @@ class DeviceLoanListResponse(BaseModel):
     page_size: int
     total_pages: int
 
+
+# ===============================
+# FILTER, HISTORY, STATISTICS, SUMMARY
+# ===============================
 
 class DeviceLoanFilter(BaseModel):
     """Schema for loan search and filtering."""
@@ -191,7 +188,7 @@ class LoanHistoryResponse(BaseModel):
     changed_by_user_id: int
     change_date: datetime
     notes: Optional[str]
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -208,37 +205,7 @@ class DeviceLoanStats(BaseModel):
     most_borrowed_devices: List[dict]
     top_borrowers: List[dict]
 
-
-class AssignmentLetterValidation(BaseModel):
-    """Schema for validating assignment letter number format."""
-    assignment_letter_number: str = Field(..., description="Nomor surat tugas untuk divalidasi")
-    
-    @field_validator('assignment_letter_number')
-    @classmethod
-    def validate_format(cls, v: str) -> str:
-        """Validate assignment letter number format."""
-        if not v:
-            raise ValueError("Assignment letter number is required")
-        
-        pattern = r'^\d+/BALMON\.18/KP\.01\.06/[A-Z0-9]+ \d+/\d{4}$'
-        
-        if not re.match(pattern, v.strip()):
-            raise ValueError(
-                "Assignment letter number format is invalid. "
-                "Required format: XX/BALMON.18/KP.01.06/XX XX/YYYY "
-                "Example: 03/BALMON.18/KP.01.06/LAB 01/2025"
-            )
-        
-        return v.strip()
-
-
-class AssignmentLetterValidationResponse(BaseModel):
-    """Schema for assignment letter validation response."""
-    is_valid: bool
-    message: str
-    example_format: str = "03/BALMON.18/KP.01.06/LAB 01/2025"
-
-
+ 
 class DeviceLoanSummary(BaseModel):
     """Schema for loan summary (for exports)."""
     id: int
@@ -251,3 +218,25 @@ class DeviceLoanSummary(BaseModel):
     status: LoanStatus
     total_devices: int
     device_names: List[str]
+
+class DeviceConditionChangeRequestResponse(BaseModel):
+    id: int
+    loan_item_id: Optional[int] = None
+    device_id: Optional[int] = None
+    requested_by_user_id: Optional[int] = None
+
+    old_condition: Optional[DeviceCondition] = None
+    new_condition: Optional[DeviceCondition] = None
+    reason: Optional[str] = None
+    status: ConditionChangeStatus
+
+    requested_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by_admin_id: Optional[int] = None
+
+    device_name: Optional[str] = None
+    requested_by_name: Optional[str] = None
+    reviewed_by_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True

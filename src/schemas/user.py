@@ -7,14 +7,12 @@ from datetime import datetime
 
 class UserBase(BaseModel):
     """Base user schema."""
+    username: str
     email: EmailStr
-    first_name: str
-    last_name: Optional[str] = None
     is_active: bool = True
-
+    
 
 class UserCreate(UserBase):
-    """Schema for creating a user with password validation."""
     password: str
     
     @field_validator('password')
@@ -29,11 +27,16 @@ class UserCreate(UserBase):
         return password
 
 
+
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    updated_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None  # opsional, untuk penolakan user
+
 
 
 class UserResponse(UserBase):
@@ -133,10 +136,8 @@ class UserListResponse(BaseModel):
 
 
 class UserSearchFilter(BaseModel):
-    """Schema for user search and filtering."""
     email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    username: Optional[str] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
     mfa_enabled: Optional[bool] = None
@@ -191,6 +192,7 @@ class UserStats(BaseModel):
     verified_users: int
     locked_users: int
     mfa_enabled_users: int
+    pending_users: int
     new_users_today: int
     new_users_this_week: int
     new_users_this_month: int

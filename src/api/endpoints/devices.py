@@ -1,7 +1,7 @@
 """Comprehensive device management endpoints."""
 
 from typing import Optional, List, Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
@@ -81,13 +81,15 @@ async def create_device(
     return await device_service.create_device(device_data)
 
 
-@router.get("/stats", response_model=DeviceStats, dependencies=[Depends(require_admin)])
+@router.get("/stats", response_model=DeviceStats)
 async def get_device_statistics(
+    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get device statistics (Admin only)."""
+    """Get device statistics (accessible to all logged users)."""
     stats = await device_service.get_device_stats()
     return DeviceStats(**stats)
+
 
 
 @router.get("/search")
@@ -178,6 +180,42 @@ async def get_device_by_nup(
         raise HTTPException(status_code=404, detail="Device not found")
     return device
 
+@router.post("/{device_id}/photos", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
+async def upload_device_photo(
+    device_id: int,
+    file: UploadFile = File(...),
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Upload a photo for a device (Admin only).
+    Stores file in static/uploads/devices/ and updates device record.
+    """
+    return await device_service.upload_device_photo(device_id, file)
+
+
+@router.delete("/{device_id}/photos/{filename}", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
+async def delete_device_photo(
+    device_id: int,
+    filename: str,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Delete a specific photo of a device by filename (Admin only).
+    Removes both database record and file from storage.
+    """
+    return await device_service.delete_device_photo(device_id, filename)
+
+
+@router.get("/{device_id}/photos", response_model=List[str])
+async def get_device_photos(
+    device_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Retrieve all photo URLs for a given device (accessible to all logged-in users).
+    """
+    return await device_service.get_device_photos(device_id)
 
 @router.get("/{device_id}", response_model=DeviceResponse)
 async def get_device_by_id(
@@ -189,7 +227,9 @@ async def get_device_by_id(
     device = await device_service.get_device(device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
-    return device
+
+    # ✅ Pastikan dikonversi ke schema agar serialization konsisten
+    return DeviceResponse.model_validate(device)
 
 
 @router.put("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
@@ -227,7 +267,7 @@ async def delete_device(
     device_id: int,
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Delete device (soft delete, Admin only)."""
+    """Delete device (hard delete, Admin only)."""
     success = await device_service.delete_device(device_id)
     return {"message": "Device deleted successfully"}
 
@@ -377,3 +417,4 @@ async def get_device_usage_history(
         "usage_statistics": device_stats,
         "message": "Device usage history retrieved successfully"
     }
+

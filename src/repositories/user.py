@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from datetime import datetime, timedelta
-from sqlalchemy import select, and_, update
+from sqlalchemy import select, and_, update, delete
 
 from src.models.user import User, Role, UserRole, PasswordResetToken, MFABackupCode
 from src.schemas.user import UserCreate, UserUpdate
@@ -29,15 +29,15 @@ class UserRepository:
         return result.scalar_one_or_none()
 
     async def create(self, user_data: UserCreate, hashed_password: str) -> User:
-        """Create a new user."""
+        """Create a new user (requires admin approval)."""
         user = User(
+            username=user_data.username,
             email=user_data.email,
             hashed_password=hashed_password,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            is_active=user_data.is_active,
+            is_active=False,         
+            is_verified=False,       
             password_changed_at=datetime.utcnow(),
-            password_history=[hashed_password]
+            password_history=[hashed_password],
         )
         self.session.add(user)
         await self.session.commit()
@@ -245,10 +245,8 @@ class UserRepository:
         if filters:
             if filters.get("email"):
                 query = query.where(User.email.ilike(f"%{filters['email']}%"))
-            if filters.get("first_name"):
-                query = query.where(User.first_name.ilike(f"%{filters['first_name']}%"))
-            if filters.get("last_name"):
-                query = query.where(User.last_name.ilike(f"%{filters['last_name']}%"))
+            if filters.get("username"):
+                query = query.where(User.username.ilike(f"%{filters['username']}%"))
             if filters.get("is_active") is not None:
                 query = query.where(User.is_active == filters["is_active"])
             if filters.get("is_verified") is not None:
@@ -278,10 +276,8 @@ class UserRepository:
         if filters:
             if filters.get("email"):
                 query = query.where(User.email.ilike(f"%{filters['email']}%"))
-            if filters.get("first_name"):
-                query = query.where(User.first_name.ilike(f"%{filters['first_name']}%"))
-            if filters.get("last_name"):
-                query = query.where(User.last_name.ilike(f"%{filters['last_name']}%"))
+            if filters.get("username"):
+                query = query.where(User.username.ilike(f"%{filters['username']}%"))
             if filters.get("is_active") is not None:
                 query = query.where(User.is_active == filters["is_active"])
             if filters.get("is_verified") is not None:
@@ -293,90 +289,89 @@ class UserRepository:
         return result.scalar()
     
     async def delete_user(self, user_id: int) -> bool:
-        """Soft delete user."""
-        query = (
-            update(User)
-            .where(User.id == user_id)
-            .values(deleted_at=datetime.utcnow(), updated_at=datetime.utcnow())
-        )
-        result = await self.session.execute(query)
+        """Delete user permanently (hard delete)."""
+        stmt = delete(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
         await self.session.commit()
         return result.rowcount > 0
     
     async def get_user_stats(self) -> dict:
         """Get comprehensive user statistics."""
         from sqlalchemy import func, and_
-        
+    
+        now = datetime.utcnow()
+        today = now.date()
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
+
         # Total users
         total_query = select(func.count(User.id)).where(User.deleted_at.is_(None))
-        total_result = await self.session.execute(total_query)
-        total_users = total_result.scalar()
-        
+        total_users = (await self.session.execute(total_query)).scalar()
+
         # Active users
         active_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), User.is_active == True)
         )
-        active_result = await self.session.execute(active_query)
-        active_users = active_result.scalar()
-        
+        active_users = (await self.session.execute(active_query)).scalar()
+
         # Verified users
         verified_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), User.is_verified == True)
         )
-        verified_result = await self.session.execute(verified_query)
-        verified_users = verified_result.scalar()
-        
+        verified_users = (await self.session.execute(verified_query)).scalar()
+
         # Locked users
         locked_query = select(func.count(User.id)).where(
-            and_(User.deleted_at.is_(None), User.locked_until > datetime.utcnow())
+            and_(User.deleted_at.is_(None), User.locked_until > now)
         )
-        locked_result = await self.session.execute(locked_query)
-        locked_users = locked_result.scalar()
-        
+        locked_users = (await self.session.execute(locked_query)).scalar()
+
         # MFA enabled users
         mfa_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), User.mfa_enabled == True)
         )
-        mfa_result = await self.session.execute(mfa_query)
-        mfa_enabled_users = mfa_result.scalar()
-        
-        # New users statistics
-        today = datetime.utcnow().date()
-        week_ago = datetime.utcnow() - timedelta(days=7)
-        month_ago = datetime.utcnow() - timedelta(days=30)
-        
+        mfa_enabled_users = (await self.session.execute(mfa_query)).scalar()
+
+        # ✅ Pending users
+        pending_query = select(func.count(User.id)).where(
+            and_(
+                User.deleted_at.is_(None),
+                User.is_active == False,
+                User.is_verified == False
+            )
+        )
+        pending_users = (await self.session.execute(pending_query)).scalar()
+
         # New users today
         today_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), func.date(User.created_at) == today)
         )
-        today_result = await self.session.execute(today_query)
-        new_users_today = today_result.scalar()
-        
+        new_users_today = (await self.session.execute(today_query)).scalar()
+
         # New users this week
         week_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), User.created_at >= week_ago)
         )
-        week_result = await self.session.execute(week_query)
-        new_users_this_week = week_result.scalar()
-        
+        new_users_this_week = (await self.session.execute(week_query)).scalar()
+
         # New users this month
         month_query = select(func.count(User.id)).where(
             and_(User.deleted_at.is_(None), User.created_at >= month_ago)
         )
-        month_result = await self.session.execute(month_query)
-        new_users_this_month = month_result.scalar()
-        
+        new_users_this_month = (await self.session.execute(month_query)).scalar()
+
         return {
             "total_users": total_users,
             "active_users": active_users,
             "verified_users": verified_users,
             "locked_users": locked_users,
             "mfa_enabled_users": mfa_enabled_users,
+            "pending_users": pending_users,  # ✅ tambahkan di sini
             "new_users_today": new_users_today,
             "new_users_this_week": new_users_this_week,
-            "new_users_this_month": new_users_this_month
+            "new_users_this_month": new_users_this_month,
         }
-    
+
     async def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
         """Remove role from user."""
         query = select(UserRole).where(
@@ -413,3 +408,8 @@ class UserRepository:
         query = select(Role).where(Role.deleted_at.is_(None))
         result = await self.session.execute(query)
         return result.scalars().all()
+    
+    async def hard_delete(self, user):
+        """Physically remove user from the database."""
+        await self.session.delete(user)
+

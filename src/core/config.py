@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Admin Seeder
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_EMAIL: str = "admin@example.com"
+    ADMIN_PASSWORD: str = "admin123"
+
     # Redis (optional)
     REDIS_HOST: Optional[str] = None
     REDIS_PORT: Optional[int] = None
