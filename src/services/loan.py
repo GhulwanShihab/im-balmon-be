@@ -41,56 +41,101 @@ class LoanService:
     #         )
 
     async def create_loan(self, loan_data: DeviceLoanCreate, borrower_user_id: int) -> DeviceLoanResponse:
-        """Create a new device loan with validation."""
-        print("🔧 [LoanService] loan_items:", [item.device_id for item in loan_data.loan_items])
+        """Create a new device loan with validation - supports child devices."""
 
-        # Validate that all devices exist and are available
-        device_ids = [item.device_id for item in loan_data.loan_items]
+        print("🔧 [LoanService] Creating loan with items:")
+        for i, item in enumerate(loan_data.loan_items):
+            print(f"  Item {i+1}: device_id={item.device_id}, child_device_id={item.child_device_id}")
+
+        # ✅ Validate that all devices exist and are available
         devices = []
-        
-        for device_id in device_ids:
-            device = await self.device_repo.get_by_id(device_id)
-            if not device:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Device with ID {device_id} not found"
-                )
-            
-            if device.device_status != "TERSEDIA":
+
+        for item in loan_data.loan_items:
+            device = None
+            device_identifier = None
+
+            # ✅ Handle parent device
+            if item.device_id is not None:
+                device_identifier = item.device_id
+                device = await self.device_repo.get_by_id(item.device_id)
+                if not device:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Device with ID {item.device_id} not found"
+                    )
+
+            # ✅ Handle child device
+            elif item.child_device_id is not None:
+                device_identifier = item.child_device_id
+                device = await self.device_repo.get_by_id(item.child_device_id)
+                if not device:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Child device with ID {item.child_device_id} not found"
+                    )
+
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Perangkat '{device.device_name}' sedang {device.device_status.lower()}."
+                    detail="Either device_id or child_device_id must be provided"
                 )
-            devices.append(device)
-        
+
+            # Check device status
+            device_status = device.device_status
+            if isinstance(device_status, str):
+                device_status_upper = device_status.upper()
+            else:
+                device_status_upper = device_status.value.upper() if hasattr(device_status, 'value') else str(device_status).upper()
+
+            if device_status_upper != "TERSEDIA":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Perangkat '{device.device_name}' sedang {device_status_upper.lower()}."
+                )
+
+            devices.append((item, device))
+
         # Calculate loan end date
         loan_end_date = loan_data.loan_start_date + timedelta(days=loan_data.usage_duration_days)
-        
-        # Check device availability for the loan period
-        for item in loan_data.loan_items:
-            is_available = await self.loan_repo.check_device_availability(
-                device_id=item.device_id,
-                start_date=loan_data.loan_start_date,
-                end_date=loan_end_date
-            )
-            
+
+        # ✅ Check device availability for the loan period
+        for item, device in devices:
+            # Check availability based on device type
+            if item.device_id is not None:
+                is_available = await self.loan_repo.check_device_availability(
+                    device_id=item.device_id,
+                    start_date=loan_data.loan_start_date,
+                    end_date=loan_end_date
+                )
+            else:
+                # For child devices, check with child_device_id
+                is_available = await self.loan_repo.check_device_availability(
+                    device_id=item.child_device_id,  # Use child_device_id
+                    start_date=loan_data.loan_start_date,
+                    end_date=loan_end_date
+                )
+
             if not is_available:
-                device = next(d for d in devices if d.id == item.device_id)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Device '{device.device_name}' is not available for the requested period"
                 )
-        
+
         # Check for duplicate assignment letter number
-        existing_loan = await self.loan_repo.get_by_assignment_letter_number(loan_data.assignment_letter_number)
+        existing_loan = await self.loan_repo.get_by_assignment_letter_number(
+            loan_data.assignment_letter_number
+        )
         if existing_loan:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assignment letter number already exists"
             )
-        
-        # Create the loan
+
+        # ✅ Create the loan
         loan = await self.loan_repo.create(loan_data, borrower_user_id)
+
+        print(f"✅ [LoanService] Loan created successfully: {loan.loan_number}")
+
         return DeviceLoanResponse.model_validate(loan)
 
     async def get_loan(self, loan_id: int) -> Optional[DeviceLoanResponse]:

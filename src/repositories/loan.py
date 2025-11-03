@@ -82,12 +82,14 @@ class LoanRepository:
         return f"BA-{year}-{month:02d}-{count:03d}"
 
     async def create(self, loan_data: DeviceLoanCreate, borrower_user_id: int) -> DeviceLoan:
-        """Create a new device loan."""
+        """Create a new device loan - supports both parent and child devices."""
         loan_number = await self.generate_loan_number()
         loan_end_date = loan_data.loan_start_date + timedelta(days=loan_data.usage_duration_days)
     
         loan = DeviceLoan(
             loan_number=loan_number,
+            pihak_1_id=loan_data.pihak_1_id,
+            pihak_2_id=loan_data.pihak_2_id,
             assignment_letter_number=loan_data.assignment_letter_number,
             assignment_letter_date=loan_data.assignment_letter_date,
             borrower_name=loan_data.borrower_name,
@@ -103,54 +105,79 @@ class LoanRepository:
         )
     
         self.session.add(loan)
-        await self.session.flush()   # dapat loan.id
+        await self.session.flush()  # Get loan.id
     
-        # ✅ Loop sekali saja
+        # ✅ Process each loan item
         for item_data in loan_data.loan_items:
-        
-            # Cek apakah device_id adalah CHILD
-            child_device = await self.session.get(DeviceChild, item_data.device_id)
-    
-            if child_device:
-                # Parent adalah parent_id dari child
+            device = None
+            child_device = None
+            
+            # ✅ Case 1: Child device specified (from group borrow)
+            if item_data.child_device_id is not None:
+                print(f"📦 Processing CHILD device_id={item_data.child_device_id}")
+                child_device = await self.session.get(DeviceChild, item_data.child_device_id)
+                
+                if not child_device:
+                    raise ValueError(f"Child device dengan ID {item_data.child_device_id} tidak ditemukan.")
+                
+                # Get parent device
                 device = await self.session.get(Device, child_device.parent_id)
+                if not device:
+                    raise ValueError(f"Parent device untuk child {item_data.child_device_id} tidak ditemukan.")
+            
+            # ✅ Case 2: Parent device specified (from manual borrow)
+            elif item_data.device_id is not None:
+                print(f"📦 Processing PARENT device_id={item_data.device_id}")
+                
+                # First check if this ID is actually a child device
+                child_device = await self.session.get(DeviceChild, item_data.device_id)
+                
+                if child_device:
+                    # It's a child device, get its parent
+                    device = await self.session.get(Device, child_device.parent_id)
+                else:
+                    # It's a parent device
+                    device = await self.session.get(Device, item_data.device_id)
+                
+                if not device:
+                    raise ValueError(f"Device dengan ID {item_data.device_id} tidak ditemukan.")
+            
             else:
-                # Cek apakah dia parent
-                device = await self.session.get(Device, item_data.device_id)
-    
-            if not device:
-                raise ValueError(f"Device dengan ID {item_data.device_id} tidak ditemukan.")
-    
-            # ✅ Cek status parent/child
+                raise ValueError("Either device_id or child_device_id must be provided")
+            
+            # ✅ Check status
             if device.device_status == "DIPINJAM":
                 raise ValueError(f"Perangkat '{device.device_name}' sedang dipinjam.")
-    
+            
             if child_device and child_device.device_status == "DIPINJAM":
                 raise ValueError(f"Child perangkat '{child_device.device_name}' sedang dipinjam.")
-    
+            
             # ✅ Update status
             if child_device:
                 child_device.device_status = "DIPINJAM"
                 child_device.updated_at = datetime.utcnow()
                 self.session.add(child_device)
+                print(f"✅ Updated child device status: {child_device.device_name}")
             else:
                 device.device_status = "DIPINJAM"
                 device.updated_at = datetime.utcnow()
                 self.session.add(device)
-    
-            # ✅ Simpan loan item
+                print(f"✅ Updated parent device status: {device.device_name}")
+            
+            # ✅ Create loan item with proper device references
             loan_item = DeviceLoanItem(
                 loan_id=loan.id,
-                device_id=device.id,
-                child_device_id=child_device.id if child_device else None,
+                device_id=device.id,  # ← Always set parent device ID
+                child_device_id=child_device.id if child_device else None,  # ← Set if child
                 quantity=item_data.quantity,
                 condition_before=item_data.condition_before,
                 condition_notes=item_data.condition_notes,
                 created_by=borrower_user_id
             )
             self.session.add(loan_item)
-    
-            # ✅ Jika semua child parent sudah DIPINJAM → parent ikut DIPINJAM
+            print(f"✅ Created loan item: device_id={loan_item.device_id}, child_device_id={loan_item.child_device_id}")
+            
+            # ✅ If all children of parent are borrowed, mark parent as borrowed too
             if child_device:
                 from sqlalchemy.future import select
                 result = await self.session.execute(
@@ -160,8 +187,9 @@ class LoanRepository:
                 if all_children and all(c.device_status == "DIPINJAM" for c in all_children):
                     device.device_status = "DIPINJAM"
                     self.session.add(device)
+                    print(f"✅ All children borrowed, marked parent as DIPINJAM: {device.device_name}")
     
-        # ✅ Simpan history
+        # ✅ Save history
         history = LoanHistory(
             loan_id=loan.id,
             old_status=None,
@@ -174,6 +202,9 @@ class LoanRepository:
     
         await self.session.commit()
         await self.session.refresh(loan)
+        
+        print(f"🎉 Loan created successfully: {loan.loan_number}")
+        
         return await self.get_by_id(loan.id)
     
     async def add_history(

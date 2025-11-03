@@ -1,10 +1,14 @@
-"""User model with password security features."""
+"""User model with password security features - FIXED."""
 
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import Field, SQLModel, Relationship, Column, JSON
 
 from .base import BaseModel
+
+# ❌ REMOVE these imports - causes circular import:
+# from .device_group import DeviceGroup
+# from .loan import DeviceLoan
 
 
 class User(BaseModel, SQLModel, table=True):
@@ -34,10 +38,11 @@ class User(BaseModel, SQLModel, table=True):
     mfa_enabled: bool = Field(default=False)
     mfa_secret: Optional[str] = Field(default=None)
     
-    # Relationships
+    # ✅ Relationships - USE STRING ANNOTATIONS
     roles: List["UserRole"] = Relationship(back_populates="user")
     backup_codes: List["MFABackupCode"] = Relationship(back_populates="user")
-    loans: List["DeviceLoan"] = Relationship(
+    device_groups: List["DeviceGroup"] = Relationship(back_populates="user")  # ← String
+    loans: List["DeviceLoan"] = Relationship(  # ← String
         back_populates="borrower",
         sa_relationship_kwargs={"foreign_keys": "DeviceLoan.borrower_user_id"}
     )

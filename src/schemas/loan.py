@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from datetime import datetime, date
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 import re
 
 from ..models.loan import LoanStatus, DeviceCondition, ConditionChangeStatus
@@ -16,11 +16,21 @@ from .device_child import DeviceChildResponse
 # ===============================
 
 class DeviceLoanItemBase(BaseModel):
-    """Base schema for loan items."""
-    device_id: int = Field(..., description="ID perangkat")
+    """Base schema for loan items - supports both parent and child devices."""
+    device_id: Optional[int] = Field(None, description="ID perangkat parent (null jika child)")
+    child_device_id: Optional[int] = Field(None, description="ID perangkat child (null jika parent)")
     quantity: int = Field(default=1, ge=1, description="Jumlah yang dipinjam")
     condition_before: DeviceCondition = Field(default=DeviceCondition.BAIK, description="Kondisi sebelum dipinjam")
     condition_notes: Optional[str] = Field(None, description="Catatan kondisi perangkat")
+    
+    @model_validator(mode='after')
+    def check_one_device_reference(self):
+        """Ensure exactly one of device_id or child_device_id is set."""
+        if self.device_id is None and self.child_device_id is None:
+            raise ValueError('Either device_id or child_device_id must be provided')
+        if self.device_id is not None and self.child_device_id is not None:
+            raise ValueError('Cannot set both device_id and child_device_id')
+        return self
 
 
 class DeviceLoanItemCreate(DeviceLoanItemBase):
@@ -34,14 +44,19 @@ class DeviceLoanItemReturn(BaseModel):
     condition_after: Optional[DeviceCondition] = Field(None, description="Kondisi setelah dikembalikan")
     condition_notes: Optional[str] = Field(None, description="Catatan kondisi setelah dikembalikan")
 
-class DeviceLoanItemResponse(DeviceLoanItemBase):
-    """Schema for loan item response."""
+class DeviceLoanItemResponse(BaseModel):
+    """Schema for loan item response - updated."""
     id: int
     loan_id: int
-    condition_after: Optional[DeviceCondition]
+    device_id: Optional[int] = None  # ← Add Optional
+    child_device_id: Optional[int] = None  # ← Add this field
+    quantity: int
+    condition_before: DeviceCondition
+    condition_after: Optional[DeviceCondition] = None
+    condition_notes: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime]
-    device: Optional[DeviceResponse]
+    updated_at: Optional[datetime] = None
+    device: Optional[DeviceResponse] = None
     child: Optional[DeviceChildResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

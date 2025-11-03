@@ -1,15 +1,18 @@
-"""Loan models for device loan system."""
+"""Loan models for device loan system - FIXED."""
 
 from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
-from sqlmodel import Field, SQLModel, Relationship, Column, String, ForeignKey
+from sqlmodel import Field, SQLModel, Relationship, Column, ForeignKey
 from sqlalchemy import Enum as SQLEnum
 
 from .base import BaseModel
-from .perangkat import Device
-from .device_child import DeviceChild
-from .user import User
+
+# ❌ REMOVE these imports - use string annotations instead:
+# from .perangkat import Device
+# from .device_child import DeviceChild
+# from .employee import Employee
+# from .user import User
 
 
 class LoanStatus(str, Enum):
@@ -26,10 +29,12 @@ class DeviceCondition(str, Enum):
     RUSAK_RINGAN = "RUSAK_RINGAN"
     RUSAK_BERAT = "RUSAK_BERAT"
 
+
 class ConditionChangeStatus(str, Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+
 
 class DeviceLoan(BaseModel, SQLModel, table=True):
     """Main device loan table."""
@@ -42,15 +47,15 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
     pihak_1_id: Optional[int] = Field(default=None, foreign_key="employees.id")
     pihak_2_id: Optional[int] = Field(default=None, foreign_key="employees.id")
 
-    # ✅ Relationships — tambahkan foreign_keys
-    pihak_1: Optional["Employee"] = Relationship(
+    # ✅ Relationships - USE STRING ANNOTATIONS
+    pihak_1: Optional["Employee"] = Relationship(  # ← String
         back_populates="loans_as_pihak_1",
         sa_relationship_kwargs={
             "foreign_keys": "[DeviceLoan.pihak_1_id]",
             "lazy": "joined"
         }
     )
-    pihak_2: Optional["Employee"] = Relationship(
+    pihak_2: Optional["Employee"] = Relationship(  # ← String
         back_populates="loans_as_pihak_2",
         sa_relationship_kwargs={
             "foreign_keys": "[DeviceLoan.pihak_2_id]",
@@ -80,12 +85,12 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
     return_notes: Optional[str] = Field(None, description="Catatan pengembalian")
     returned_by_user_id: Optional[int] = Field(None, foreign_key="users.id", description="User yang mengembalikan")
 
-    # Relationships to User and others
-    borrower: Optional[User] = Relationship(
+    # ✅ Relationships to User and others - STRING ANNOTATIONS
+    borrower: Optional["User"] = Relationship(
         back_populates="loans",
         sa_relationship_kwargs={"foreign_keys": "[DeviceLoan.borrower_user_id]"}
     )
-    returned_by: Optional[User] = Relationship(
+    returned_by: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[DeviceLoan.returned_by_user_id]"}
     )
 
@@ -97,6 +102,7 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
         back_populates="loan",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+
 
 class DeviceLoanItem(BaseModel, SQLModel, table=True):
     __tablename__ = "device_loan_items"
@@ -127,10 +133,11 @@ class DeviceLoanItem(BaseModel, SQLModel, table=True):
         sa_column=Column(SQLEnum(DeviceCondition)),
     )
 
-    loan: Optional[DeviceLoan] = Relationship(back_populates="loan_items")
-
-    device: Optional[Device] = Relationship()
-    child_device: Optional[DeviceChild] = Relationship()
+    # ✅ STRING ANNOTATIONS
+    loan: Optional["DeviceLoan"] = Relationship(back_populates="loan_items")
+    device: Optional["Device"] = Relationship()
+    child_device: Optional["DeviceChild"] = Relationship()
+    
     condition_notes: Optional[str] = Field(
         None, description="Catatan kondisi perangkat"
     )
@@ -139,6 +146,7 @@ class DeviceLoanItem(BaseModel, SQLModel, table=True):
         back_populates="loan_item",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+
 
 class LoanHistory(BaseModel, SQLModel, table=True):
     """Status change tracking for loans."""
@@ -159,9 +167,10 @@ class LoanHistory(BaseModel, SQLModel, table=True):
     # Additional notes
     notes: Optional[str] = Field(None, description="Catatan tambahan")
     
-    # Relationships
-    loan: Optional[DeviceLoan] = Relationship(back_populates="loan_history")
-    changed_by: Optional[User] = Relationship()
+    # ✅ STRING ANNOTATIONS
+    loan: Optional["DeviceLoan"] = Relationship(back_populates="loan_history")
+    changed_by: Optional["User"] = Relationship()
+
 
 class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     __tablename__ = "device_condition_change_requests"
@@ -182,16 +191,16 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     reviewed_at: Optional[datetime] = None
     reviewed_by_admin_id: Optional[int] = Field(None, foreign_key="users.id")
 
-    # Relationships
+    # ✅ STRING ANNOTATIONS
     loan_item: Optional["DeviceLoanItem"] = Relationship(
         back_populates="condition_change_requests"
     )
 
     device: Optional["Device"] = Relationship()
     child_device: Optional["DeviceChild"] = Relationship()
-    requested_by: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "[DeviceConditionChangeRequest.requested_by_user_id]"})
-    reviewed_by: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "[DeviceConditionChangeRequest.reviewed_by_admin_id]"})
-
-# Update User model to include loan relationship
-# This should be added to the User model in user.py
-# loans: List[DeviceLoan] = Relationship(back_populates="borrower")
+    requested_by: Optional["User"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[DeviceConditionChangeRequest.requested_by_user_id]"}
+    )
+    reviewed_by: Optional["User"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[DeviceConditionChangeRequest.reviewed_by_admin_id]"}
+    )
