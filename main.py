@@ -17,6 +17,7 @@ from src.utils.logging import setup_logging
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

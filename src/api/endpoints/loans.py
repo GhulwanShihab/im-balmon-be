@@ -1,8 +1,9 @@
 """Device loan management endpoints."""
-
+import os
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +12,7 @@ from ...core.database import get_db
 from ...repositories.loan import LoanRepository
 from ...repositories.device import DeviceRepository
 from ...services.loan import LoanService
+from ...services.loan_pdf_service import LoanPDFService
 from ...schemas.loan import (
     DeviceLoanCreate, DeviceLoanUpdate, DeviceLoanReturn, DeviceLoanCancel,
     DeviceLoanResponse, DeviceLoanListResponse, DeviceLoanFilter, DeviceLoanStats,
@@ -29,6 +31,9 @@ async def get_loan_service(session: AsyncSession = Depends(get_db)) -> LoanServi
     device_repo = DeviceRepository(session)
     return LoanService(loan_repo, device_repo)
 
+def get_loan_pdf_service() -> LoanPDFService:
+    """Get PDF service dependency."""
+    return LoanPDFService()
 
 # @router.post("/validate-assignment-letter", response_model=AssignmentLetterValidationResponse)
 # async def validate_assignment_letter_number(
@@ -323,6 +328,142 @@ async def delete_loan(
     
     return {"message": "Loan deleted successfully"}
 
+@router.get("/{loan_id}/export-pdf", response_class=FileResponse)
+async def export_loan_pdf(
+    loan_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service),
+    pdf_service: LoanPDFService = Depends(get_loan_pdf_service)
+):
+    """
+    Export loan document as PDF (Berita Acara Penggunaan Peralatan Monitoring).
+    
+    This endpoint generates a formatted PDF document for the loan record.
+    The PDF includes:
+    - Official header with organization info
+    - Loan details (assignment letter, dates, etc.)
+    - Device list in table format
+    - Terms and conditions
+    - Signature sections for all parties
+    
+    Access: All authenticated users can export their own loans, admins can export any loan.
+    """
+    
+    # Get loan data from service
+    loan = await loan_service.get_loan(loan_id)
+    if not loan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Loan not found"
+        )
+    
+    # Check access permission
+    user_roles = current_user.get("roles", [])
+    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    # Prepare loan data for PDF (convert Pydantic models to dict)
+    loan_dict = loan.model_dump()
+    
+    # Convert date objects to date if they're datetime
+    if isinstance(loan_dict['assignment_letter_date'], datetime):
+        loan_dict['assignment_letter_date'] = loan_dict['assignment_letter_date'].date()
+    if isinstance(loan_dict['loan_start_date'], datetime):
+        loan_dict['loan_start_date'] = loan_dict['loan_start_date'].date()
+    if isinstance(loan_dict['loan_end_date'], datetime):
+        loan_dict['loan_end_date'] = loan_dict['loan_end_date'].date()
+    
+    # Process loan_items to handle child devices properly
+    processed_loan_items = []
+    for item in loan_dict['loan_items']:
+        processed_item = {
+            'id': item['id'],
+            'loan_id': item['loan_id'],
+            'device_id': item['device_id'],
+            'child_device_id': item['child_device_id'],
+            'quantity': item['quantity'],
+            'condition_before': item['condition_before'],
+            'condition_after': item.get('condition_after'),
+            'condition_notes': item.get('condition_notes'),
+            'device': item['device'],
+            'child': item.get('child')  # This will contain child device data if exists
+        }
+        processed_loan_items.append(processed_item)
+    
+    loan_dict['loan_items'] = processed_loan_items
+    
+    # Create output directory if not exists
+    output_dir = "/tmp/loan_pdfs"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate filename with proper format
+    safe_loan_number = loan_dict['loan_number'].replace('/', '-')
+    filename = f"Berita_Acara_{safe_loan_number}_{datetime.now().strftime('%Y-%m-%d')}.pdf"
+    output_path = os.path.join(output_dir, filename)
+    
+    try:
+        # Generate PDF
+        pdf_path = pdf_service.generate_loan_pdf(loan_dict, output_path)
+        
+        # Return PDF file
+        return FileResponse(
+            path=pdf_path,
+            filename=filename,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    
+    except Exception as e:
+        import traceback
+        print("❌ Error generating PDF:")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate PDF: {str(e)}"
+        )
+
+# Alternative endpoint for generating PDF and returning path (for frontend download)
+@router.post("/{loan_id}/generate-pdf")
+async def generate_loan_pdf(
+    loan_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service),
+    pdf_service: LoanPDFService = Depends(get_loan_pdf_service)
+):
+    """
+    Generate PDF and return file path for download.
+    
+    This is an alternative endpoint that generates the PDF and returns
+    the file path, allowing frontend to handle the download separately.
+    """
+    
+    # Get loan data
+    loan = await loan_service.get_loan(loan_id)
+    if not loan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Loan not found"
+        )
+    
+    # Check access permission
+    user_roles = current_user.get("roles", [])
+    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    return {
+        "message": "PDF generated successfully",
+        "loan_id": loan_id,
+        "filename": f"BA_{loan.loan_number}.pdf",
+        "download_url": f"/api/loans/{loan_id}/export-pdf"
+    }
 
 @router.post("/mark-overdue")
 async def mark_overdue_loans(

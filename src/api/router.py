@@ -2,7 +2,18 @@
 
 from fastapi import APIRouter
 
-from src.api.endpoints import auth, users, mfa, devices, device_child, loans, employees, export, device_group
+from src.api.endpoints import (
+    auth, 
+    users, 
+    mfa, 
+    devices, 
+    device_child, 
+    loans, 
+    employees, 
+    export, 
+    device_group,
+    device_export  # ✅ Import router baru
+)
 
 api_router = APIRouter()
 
@@ -15,4 +26,5 @@ api_router.include_router(device_child.router, prefix="/device-children", tags=[
 api_router.include_router(device_group.router, prefix="/device-groups", tags=["device-groups"])
 api_router.include_router(loans.router, prefix="/loans", tags=["loans"])
 api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
-api_router.include_router(export.router, prefix="/export", tags=["export"])
+api_router.include_router(export.router, prefix="/export", tags=["export"])  # PDF export
+api_router.include_router(device_export.router, prefix="/devices/export", tags=["device-export"])  # ✅ Excel export
