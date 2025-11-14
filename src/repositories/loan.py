@@ -255,7 +255,7 @@ class LoanRepository:
         item_conditions: List[Dict],
         returned_by: int
     ) -> Optional[DeviceLoan]:
-        """Mark loan as returned and update device & child statuses properly."""
+        """✅ FIXED: Mark loan as returned and update device & child statuses properly."""
         
         loan = await self.get_by_id(loan_id)
         if not loan or loan.status != LoanStatus.ACTIVE:
@@ -269,7 +269,7 @@ class LoanRepository:
         loan.updated_by = returned_by
         loan.updated_at = datetime.utcnow()
     
-        # Update each item
+        # ✅ Update each item with improved logic
         for item_condition in item_conditions:
             loan_item = next(
                 (item for item in loan.loan_items if item.id == item_condition["id"]),
@@ -284,36 +284,67 @@ class LoanRepository:
             loan_item.updated_by = returned_by
             loan_item.updated_at = datetime.utcnow()
     
-            # Ambil perangkat utama (parent)
-            device = await self.session.get(Device, loan_item.device_id)
-            if not device:
-                continue
+            # ✅ IMPROVED LOGIC untuk return device
             
-            # 🔹 Cek apakah parent punya child
-            result = await self.session.execute(
-                select(DeviceChild).where(DeviceChild.parent_id == device.id)
-            )
-            children = result.scalars().all()
-    
-            if not children:
-                # 🔸 Jika tidak punya child → langsung ubah status ke TERSEDIA
-                device.device_status = "TERSEDIA"
-                device.updated_at = datetime.utcnow()
-                self.session.add(device)
-            else:
-                # 🔸 Jika punya child → ubah semua child DIPINJAM jadi TERSEDIA
-                for child in children:
-                    if child.device_status == "DIPINJAM":
-                        child.device_status = "TERSEDIA"
-                        child.updated_at = datetime.utcnow()
-                        self.session.add(child)
-    
-                # 🔸 Cek apakah semua child sudah TERSEDIA
-                all_available = all(c.device_status == "TERSEDIA" for c in children)
-                if all_available:
+            # Case 1: Jika loan_item ini untuk child device
+            if loan_item.child_device_id:
+                child = await self.session.get(DeviceChild, loan_item.child_device_id)
+                if child:
+                    # Kembalikan child device
+                    child.device_status = "TERSEDIA"
+                    child.updated_at = datetime.utcnow()
+                    self.session.add(child)
+                    print(f"✅ Returned child device: {child.device_name}")
+                    
+                    # Cek parent-nya
+                    parent = await self.session.get(Device, child.parent_id)
+                    if parent:
+                        # Cek apakah semua child dari parent ini sudah TERSEDIA
+                        result = await self.session.execute(
+                            select(DeviceChild).where(DeviceChild.parent_id == parent.id)
+                        )
+                        all_children = result.scalars().all()
+                        
+                        if all_children:
+                            all_available = all(c.device_status == "TERSEDIA" for c in all_children)
+                            if all_available:
+                                parent.device_status = "TERSEDIA"
+                                parent.updated_at = datetime.utcnow()
+                                self.session.add(parent)
+                                print(f"✅ All children available, returned parent: {parent.device_name}")
+            
+            # Case 2: Jika loan_item ini untuk parent device langsung (tanpa child)
+            elif loan_item.device_id:
+                device = await self.session.get(Device, loan_item.device_id)
+                if not device:
+                    continue
+                
+                # Cek apakah device ini punya children
+                result = await self.session.execute(
+                    select(DeviceChild).where(DeviceChild.parent_id == device.id)
+                )
+                children = result.scalars().all()
+                
+                if not children:
+                    # Tidak punya child, langsung kembalikan parent
                     device.device_status = "TERSEDIA"
                     device.updated_at = datetime.utcnow()
                     self.session.add(device)
+                    print(f"✅ Returned parent device (no children): {device.device_name}")
+                else:
+                    # Punya children, kembalikan semua child yang DIPINJAM
+                    for child in children:
+                        if child.device_status == "DIPINJAM":
+                            child.device_status = "TERSEDIA"
+                            child.updated_at = datetime.utcnow()
+                            self.session.add(child)
+                            print(f"✅ Returned child: {child.device_name}")
+                    
+                    # Kembalikan parent juga
+                    device.device_status = "TERSEDIA"
+                    device.updated_at = datetime.utcnow()
+                    self.session.add(device)
+                    print(f"✅ Returned parent device: {device.device_name}")
     
         # Catat histori
         history = LoanHistory(
@@ -561,7 +592,11 @@ class LoanRepository:
         return result.first() is None
 
     async def get_stats(self) -> Dict:
-        """Get comprehensive loan statistics."""
+        """Get comprehensive loan statistics - FIXED."""
+        
+        # Import yang diperlukan di bagian atas file (jika belum ada)
+        from src.models.device_child import DeviceChild
+        
         # Total loans
         total_query = select(func.count(DeviceLoan.id)).where(DeviceLoan.deleted_at.is_(None))
         total_result = await self.session.execute(total_query)
@@ -579,6 +614,7 @@ class LoanRepository:
         # Recent loans
         month_ago = datetime.utcnow() - timedelta(days=30)
         week_ago = datetime.utcnow() - timedelta(days=7)
+        today = datetime.utcnow().date()
         
         month_query = select(func.count(DeviceLoan.id)).where(
             and_(DeviceLoan.created_at >= month_ago, DeviceLoan.deleted_at.is_(None))
@@ -592,21 +628,71 @@ class LoanRepository:
         week_result = await self.session.execute(week_query)
         loans_this_week = week_result.scalar()
         
-        # Most borrowed devices
-        device_query = (
-            select(Device.device_name, func.count(DeviceLoanItem.id).label('loan_count'))
+        today_query = select(func.count(DeviceLoan.id)).where(
+            and_(
+                func.date(DeviceLoan.created_at) == today,
+                DeviceLoan.deleted_at.is_(None)
+            )
+        )
+        today_result = await self.session.execute(today_query)
+        loans_today = today_result.scalar()
+        
+        # ✅ MOST BORROWED DEVICES (FIXED: Count child devices)
+        
+        # Child devices query
+        child_device_query = (
+            select(
+                DeviceChild.device_name,
+                func.count(DeviceLoanItem.id).label('loan_count')
+            )
+            .join(DeviceLoanItem, DeviceChild.id == DeviceLoanItem.child_device_id)
+            .join(DeviceLoan, DeviceLoanItem.loan_id == DeviceLoan.id)
+            .where(
+                and_(
+                    DeviceLoan.deleted_at.is_(None),
+                    DeviceLoanItem.child_device_id.is_not(None)
+                )
+            )
+            .group_by(DeviceChild.id, DeviceChild.device_name)
+            .order_by(func.count(DeviceLoanItem.id).desc())
+            .limit(5)
+        )
+        
+        child_device_result = await self.session.execute(child_device_query)
+        child_borrowed = [
+            {"device_name": row[0], "loan_count": row[1]} 
+            for row in child_device_result.fetchall()
+        ]
+        
+        # Parent devices query (tanpa child)
+        parent_device_query = (
+            select(
+                Device.device_name,
+                func.count(DeviceLoanItem.id).label('loan_count')
+            )
             .join(DeviceLoanItem, Device.id == DeviceLoanItem.device_id)
             .join(DeviceLoan, DeviceLoanItem.loan_id == DeviceLoan.id)
-            .where(DeviceLoan.deleted_at.is_(None))
+            .where(
+                and_(
+                    DeviceLoan.deleted_at.is_(None),
+                    DeviceLoanItem.child_device_id.is_(None)
+                )
+            )
             .group_by(Device.id, Device.device_name)
             .order_by(func.count(DeviceLoanItem.id).desc())
             .limit(5)
         )
-        device_result = await self.session.execute(device_query)
-        most_borrowed_devices = [
+        
+        parent_device_result = await self.session.execute(parent_device_query)
+        parent_borrowed = [
             {"device_name": row[0], "loan_count": row[1]} 
-            for row in device_result.fetchall()
+            for row in parent_device_result.fetchall()
         ]
+        
+        # Gabungkan dan sort ulang
+        all_borrowed = child_borrowed + parent_borrowed
+        all_borrowed.sort(key=lambda x: x['loan_count'], reverse=True)
+        most_borrowed_devices = all_borrowed[:5]
         
         # Top borrowers
         borrower_query = (
@@ -631,7 +717,8 @@ class LoanRepository:
             "loans_by_status": status_counts,
             "loans_this_month": loans_this_month,
             "loans_this_week": loans_this_week,
-            "most_borrowed_devices": most_borrowed_devices,
+            "loans_today": loans_today,
+            "most_borrowed_devices": most_borrowed_devices,  # ✅ FIXED
             "top_borrowers": top_borrowers
         }
 

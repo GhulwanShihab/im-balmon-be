@@ -6,7 +6,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.jwt import verify_token
+from src.auth.jwt import verify_token, is_user_blacklisted  # 🔥 Add is_user_blacklisted
 from src.core.database import get_db
 from src.repositories.user import UserRepository
 
@@ -48,10 +48,19 @@ async def get_current_user(
     )
 
     try:
-        payload = verify_token(token)
+        # 🔥 FIX: Add await here!
+        payload = await verify_token(token)
+        
         user_id = payload.get("sub")
         if not user_id:
             raise credentials_exception
+
+        # 🔥 NEW: Check if user is blacklisted (logout all devices)
+        if await is_user_blacklisted(int(user_id)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been terminated. Please login again."
+            )
 
         user_repo = UserRepository(session)
         user = await user_repo.get_by_id(int(user_id))

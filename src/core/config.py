@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # JWT Settings
     JWT_SECRET_KEY: str
+    JWT_REFRESH_SECRET_KEY: str  # 🔥 NEW: Separate key untuk refresh token
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -43,9 +44,9 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = "admin@example.com"
     ADMIN_PASSWORD: str = "admin123"
 
-    # Redis (optional)
-    REDIS_HOST: Optional[str] = None
-    REDIS_PORT: Optional[int] = None
+    # Redis (optional) - 🔥 UPDATED: Make required for token blacklist
+    REDIS_HOST: str = "localhost"  # Changed from Optional
+    REDIS_PORT: int = 6379  # Changed from Optional
     REDIS_PASSWORD: Optional[str] = None
     REDIS_DB: int = 0
     REDIS_TTL: int = 3600

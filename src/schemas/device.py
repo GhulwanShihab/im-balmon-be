@@ -87,8 +87,8 @@ class DeviceSearchFilter(BaseModel):
 class DeviceStats(BaseModel):
     """Schema for device statistics."""
     total_devices: int
-    active_devices: int
-    inactive_devices: int
+    active_devices: Optional[int] = None
+    inactive_devices: Optional[int] = None
     devices_by_condition: dict
     devices_by_status: dict
     devices_by_type: dict

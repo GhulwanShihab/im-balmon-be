@@ -13,6 +13,7 @@ from src.api.router import api_router
 from src.middleware.error_handler import add_error_handlers
 from src.middleware.rate_limiting import add_rate_limiting
 from src.utils.logging import setup_logging
+from src.services.loan_scheduler import loan_scheduler
 
 # Setup logging
 setup_logging()

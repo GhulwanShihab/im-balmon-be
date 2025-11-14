@@ -214,68 +214,237 @@ class DeviceRepository:
         return result.scalar()
 
     async def get_stats(self) -> dict:
-        """Get comprehensive device statistics."""
-        # Total devices
+        """Get comprehensive device statistics - FIXED VERSION."""
+
+        # Import yang diperlukan di bagian atas file (jika belum ada)
+        from src.models.device_child import DeviceChild
+        from src.models.loan import DeviceCondition
+
+        # ========================================
+        # 1. TOTAL DEVICES (Parent + Children)
+        # ========================================
         total_query = select(func.count(Device.id))
         total_result = await self.session.execute(total_query)
         total_devices = total_result.scalar()
-        
-        # Active devices (assuming 'Aktif' status means active)
-        active_query = select(func.count(Device.id)).where(Device.device_status == DeviceStatus.TERSEDIA)
-        active_result = await self.session.execute(active_query)
-        active_devices = active_result.scalar()
-        
-        # Inactive devices
-        inactive_devices = total_devices - active_devices
-        
-        # Devices by condition
+
+        child_query = select(func.count(DeviceChild.id))
+        child_result = await self.session.execute(child_query)
+        total_children = child_result.scalar()
+
+        total_all_devices = total_devices + total_children
+
+        # ========================================
+        # 2. COUNT BY STATUS (Parent + Children)
+        # ========================================
+
+        # Available (TERSEDIA)
+        available_query = select(func.count(Device.id)).where(Device.device_status == DeviceStatus.TERSEDIA)
+        available_result = await self.session.execute(available_query)
+        available_devices = available_result.scalar()
+
+        available_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_status == DeviceStatus.TERSEDIA)
+        available_child_result = await self.session.execute(available_child_query)
+        available_children = available_child_result.scalar()
+
+        total_available = available_devices + available_children
+
+        # In Use (DIPINJAM)
+        in_use_query = select(func.count(Device.id)).where(Device.device_status == DeviceStatus.DIPINJAM)
+        in_use_result = await self.session.execute(in_use_query)
+        in_use_devices = in_use_result.scalar()
+
+        in_use_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_status == DeviceStatus.DIPINJAM)
+        in_use_child_result = await self.session.execute(in_use_child_query)
+        in_use_children = in_use_child_result.scalar()
+
+        total_in_use = in_use_devices + in_use_children
+
+        # Maintenance
+        maintenance_query = select(func.count(Device.id)).where(Device.device_status == DeviceStatus.MAINTENANCE)
+        maintenance_result = await self.session.execute(maintenance_query)
+        maintenance_devices = maintenance_result.scalar()
+
+        maintenance_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_status == DeviceStatus.MAINTENANCE)
+        maintenance_child_result = await self.session.execute(maintenance_child_query)
+        maintenance_children = maintenance_child_result.scalar()
+
+        total_maintenance = maintenance_devices + maintenance_children
+
+        # ========================================
+        # 3. COUNT BY CONDITION (Parent + Children)
+        # ========================================
+
+        # Good condition (Baik)
+        good_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.BAIK)
+        good_result = await self.session.execute(good_query)
+        good_devices = good_result.scalar()
+        print(f"🔍 DEBUG - Good devices (parent): {good_devices}")
+        print(f"🔍 DEBUG - Query WHERE: Device.device_condition == {DeviceCondition.BAIK}")
+        print(f"🔍 DEBUG - DeviceCondition.BAIK value: {DeviceCondition.BAIK.value}")
+
+        good_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.BAIK)
+        good_child_result = await self.session.execute(good_child_query)
+        good_children = good_child_result.scalar()
+        print(f"🔍 DEBUG - Good devices (children): {good_children}")
+        print(f"🔍 DEBUG - Total good condition: {good_devices + good_children}")
+
+        total_good_condition = good_devices + good_children
+
+        # Light damage (Rusak Ringan)
+        light_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.RUSAK_RINGAN)
+        light_result = await self.session.execute(light_query)
+        light_devices = light_result.scalar()
+
+        light_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.RUSAK_RINGAN)
+        light_child_result = await self.session.execute(light_child_query)
+        light_children = light_child_result.scalar()
+
+        total_light_damage = light_devices + light_children
+
+        # Heavy damage (Rusak Berat)
+        heavy_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.RUSAK_BERAT)
+        heavy_result = await self.session.execute(heavy_query)
+        heavy_devices = heavy_result.scalar()
+
+        heavy_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.RUSAK_BERAT)
+        heavy_child_result = await self.session.execute(heavy_child_query)
+        heavy_children = heavy_child_result.scalar()
+
+        total_heavy_damage = heavy_devices + heavy_children
+
+        # ========================================
+        # 4. DEVICES BY CONDITION (Dictionary)
+        # ========================================
+        devices_by_condition = {}
+
+        # Parent devices
         condition_query = select(Device.device_condition, func.count(Device.id)).group_by(Device.device_condition)
         condition_result = await self.session.execute(condition_query)
-        devices_by_condition = {row[0] or "Unknown": row[1] for row in condition_result.fetchall()}
-        
-        # Devices by status
+
+        for row in condition_result.fetchall():
+            condition = row[0]
+            count = row[1]
+
+            # ✅ FIX: Handle both string and Enum
+            if condition is None:
+                condition_key = "Unknown"
+            elif isinstance(condition, str):
+                condition_key = condition
+            else:
+                condition_key = condition.value
+
+            devices_by_condition[condition_key] = count
+
+        # Child devices
+        child_condition_query = select(DeviceChild.device_condition, func.count(DeviceChild.id)).group_by(DeviceChild.device_condition)
+        child_condition_result = await self.session.execute(child_condition_query)
+
+        for row in child_condition_result.fetchall():
+            condition = row[0]
+            count = row[1]
+
+            if condition is None:
+                condition_key = "Unknown"
+            elif isinstance(condition, str):
+                condition_key = condition
+            else:
+                condition_key = condition.value
+
+            devices_by_condition[condition_key] = devices_by_condition.get(condition_key, 0) + count
+
+        # ========================================
+        # 5. DEVICES BY STATUS (Dictionary)
+        # ========================================
+        devices_by_status = {}
+
+        # Parent devices
         status_query = select(Device.device_status, func.count(Device.id)).group_by(Device.device_status)
         status_result = await self.session.execute(status_query)
-        devices_by_status = {row[0] or "Unknown": row[1] for row in status_result.fetchall()}
-        
-        # Devices by type
+
+        for row in status_result.fetchall():
+            status = row[0]
+            count = row[1]
+
+            if status is None:
+                status_key = "Unknown"
+            elif isinstance(status, str):
+                status_key = status
+            else:
+                status_key = status.value
+
+            devices_by_status[status_key] = count
+
+        # Child devices
+        child_status_query = select(DeviceChild.device_status, func.count(DeviceChild.id)).group_by(DeviceChild.device_status)
+        child_status_result = await self.session.execute(child_status_query)
+
+        for row in child_status_result.fetchall():
+            status = row[0]
+            count = row[1]
+
+            if status is None:
+                status_key = "Unknown"
+            elif isinstance(status, str):
+                status_key = status
+            else:
+                status_key = status.value
+
+            devices_by_status[status_key] = devices_by_status.get(status_key, 0) + count
+
+        # ========================================
+        # 6. OTHER STATS (Type, Room, New Devices)
+        # ========================================
         type_query = select(Device.device_type, func.count(Device.id)).group_by(Device.device_type)
         type_result = await self.session.execute(type_query)
         devices_by_type = {row[0] or "Unknown": row[1] for row in type_result.fetchall()}
-        
-        # Devices by room
+
         room_query = select(Device.device_room, func.count(Device.id)).group_by(Device.device_room)
         room_result = await self.session.execute(room_query)
         devices_by_room = {row[0] or "Unknown": row[1] for row in room_result.fetchall()}
-        
-        # New devices statistics
+
         today = datetime.utcnow().date()
         week_ago = datetime.utcnow() - timedelta(days=7)
         month_ago = datetime.utcnow() - timedelta(days=30)
-        
-        # New devices today
+
         today_query = select(func.count(Device.id)).where(func.date(Device.created_at) == today)
         today_result = await self.session.execute(today_query)
         new_devices_today = today_result.scalar()
-        
-        # New devices this week
+
         week_query = select(func.count(Device.id)).where(Device.created_at >= week_ago)
         week_result = await self.session.execute(week_query)
         new_devices_this_week = week_result.scalar()
-        
-        # New devices this month
+
         month_query = select(func.count(Device.id)).where(Device.created_at >= month_ago)
         month_result = await self.session.execute(month_query)
         new_devices_this_month = month_result.scalar()
-        
+
+        # ========================================
+        # 7. RETURN FORMAT (Compatible with frontend)
+        # ========================================
         return {
-            "total_devices": total_devices,
-            "active_devices": active_devices,
-            "inactive_devices": inactive_devices,
+            # Main totals
+            "total": total_all_devices,  # ✅ Total parent + children
+            "total_devices": total_devices,  # Parent only
+
+            # Status counts
+            "available": total_available,  # ✅
+            "in_use": total_in_use,  # ✅
+            "maintenance": total_maintenance,  # ✅
+            "active_devices": total_available,  # Sama dengan available
+            "inactive_devices": total_in_use + total_maintenance,
+
+            # Condition counts (for frontend cards)
+            "good_condition": total_good_condition,  # ✅
+            "light_damage": total_light_damage,  # ✅
+            "heavy_damage": total_heavy_damage,  # ✅
+
+            # Dictionaries
             "devices_by_condition": devices_by_condition,
             "devices_by_status": devices_by_status,
             "devices_by_type": devices_by_type,
             "devices_by_room": devices_by_room,
+
+            # New devices
             "new_devices_today": new_devices_today,
             "new_devices_this_week": new_devices_this_week,
             "new_devices_this_month": new_devices_this_month

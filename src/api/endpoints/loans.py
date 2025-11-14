@@ -130,8 +130,11 @@ async def get_loan_stats(
 @router.get("/condition-change-requests", response_model=List[DeviceConditionChangeRequestResponse])
 async def list_condition_change_requests(
     session: AsyncSession = Depends(get_db),
-    loan_id: Optional[int] = None
+    loan_id: Optional[int] = None,
+    current_user: dict = Depends(get_current_active_user)  # ✅ Add auth
 ):
+    """✅ FIXED: List condition change requests with proper joins."""
+    
     query = (
         select(DeviceConditionChangeRequest)
         .options(
@@ -139,16 +142,17 @@ async def list_condition_change_requests(
             selectinload(DeviceConditionChangeRequest.child_device),
             selectinload(DeviceConditionChangeRequest.requested_by),
             selectinload(DeviceConditionChangeRequest.reviewed_by),
+            selectinload(DeviceConditionChangeRequest.loan_item)  # ✅ Add this
         )
         .order_by(DeviceConditionChangeRequest.requested_at.desc())
     )
 
-    # ✅ filter by LOAN id, not loan_item_id
+    # ✅ FIXED: Proper filter by loan_id
     if loan_id:
-        query = (
-            query.join(DeviceConditionChangeRequest.loan_item)
-                 .join(DeviceLoanItem.loan)
-                 .where(DeviceLoanItem.loan.has(DeviceLoan.id == loan_id))
+        query = query.where(
+            DeviceConditionChangeRequest.loan_item.has(
+                DeviceLoanItem.loan_id == loan_id
+            )
         )
 
     result = await session.execute(query)
