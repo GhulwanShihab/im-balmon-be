@@ -1,5 +1,5 @@
 """Loan repository for database operations."""
-
+import logging
 from typing import List, Optional, Dict, Tuple
 from datetime import datetime, date, timedelta
 from sqlalchemy import select, and_, or_, update, func, join
@@ -12,6 +12,7 @@ from ..models.device_child import DeviceChild
 from ..models.user import User
 from ..schemas.loan import DeviceLoanCreate, DeviceLoanUpdate, DeviceLoanFilter
 
+logger = logging.getLogger(__name__)
 
 class LoanRepository:
     def __init__(self, session: AsyncSession):
@@ -255,10 +256,13 @@ class LoanRepository:
         item_conditions: List[Dict],
         returned_by: int
     ) -> Optional[DeviceLoan]:
-        """✅ FIXED: Mark loan as returned and update device & child statuses properly."""
+        """Mark loan as returned and update device & child statuses properly."""
         
         loan = await self.get_by_id(loan_id)
-        if not loan or loan.status != LoanStatus.ACTIVE:
+        
+        # ✅ PERBAIKAN: Allow return untuk ACTIVE dan OVERDUE
+        if not loan or loan.status not in [LoanStatus.ACTIVE, LoanStatus.OVERDUE]:
+            logger.warning(f"⚠️ Cannot return loan {loan_id}: Loan not found or status is {loan.status if loan else 'None'}")
             return None
     
         old_status = loan.status
@@ -269,7 +273,7 @@ class LoanRepository:
         loan.updated_by = returned_by
         loan.updated_at = datetime.utcnow()
     
-        # ✅ Update each item with improved logic
+        # Update each item with improved logic
         for item_condition in item_conditions:
             loan_item = next(
                 (item for item in loan.loan_items if item.id == item_condition["id"]),
@@ -284,7 +288,7 @@ class LoanRepository:
             loan_item.updated_by = returned_by
             loan_item.updated_at = datetime.utcnow()
     
-            # ✅ IMPROVED LOGIC untuk return device
+            # IMPROVED LOGIC untuk return device
             
             # Case 1: Jika loan_item ini untuk child device
             if loan_item.child_device_id:
@@ -346,10 +350,10 @@ class LoanRepository:
                     self.session.add(device)
                     print(f"✅ Returned parent device: {device.device_name}")
     
-        # Catat histori
+        # ✅ Catat histori dengan old_status yang benar (bisa ACTIVE atau OVERDUE)
         history = LoanHistory(
             loan_id=loan.id,
-            old_status=old_status,
+            old_status=old_status,  # ← Ini akan OVERDUE jika sebelumnya overdue
             new_status=LoanStatus.RETURNED,
             change_reason="Loan returned",
             changed_by_user_id=returned_by,
@@ -397,8 +401,32 @@ class LoanRepository:
 
     async def mark_overdue_loans(self) -> int:
         """Mark loans as overdue if past due date."""
+        from datetime import date
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         today = date.today()
-        
+
+        logger.info(f"🔍 Checking for overdue loans. Today: {today}")
+
+        # ✅ Debug: Cek dulu ada berapa loan yang seharusnya overdue
+        check_query = select(DeviceLoan).where(
+            and_(
+                DeviceLoan.status == LoanStatus.ACTIVE,
+                DeviceLoan.loan_end_date < today,
+                DeviceLoan.deleted_at.is_(None)
+            )
+        )
+
+        check_result = await self.session.execute(check_query)
+        loans_to_mark = check_result.scalars().all()
+
+        logger.info(f"📊 Found {len(loans_to_mark)} loans to mark as overdue:")
+        for loan in loans_to_mark:
+            logger.info(f"  - Loan ID: {loan.id}, Number: {loan.loan_number}, End: {loan.loan_end_date}, Status: {loan.status}")
+
+        # ✅ Lakukan update
         query = (
             update(DeviceLoan)
             .where(
@@ -413,10 +441,12 @@ class LoanRepository:
                 updated_at=datetime.utcnow()
             )
         )
-        
+
         result = await self.session.execute(query)
         overdue_count = result.rowcount
-        
+
+        logger.info(f"✅ Updated {overdue_count} rows")
+
         if overdue_count > 0:
             # Get the overdue loans to create history records
             overdue_loans_query = select(DeviceLoan.id).where(
@@ -428,7 +458,9 @@ class LoanRepository:
             )
             overdue_result = await self.session.execute(overdue_loans_query)
             overdue_loan_ids = [row[0] for row in overdue_result.fetchall()]
-            
+
+            logger.info(f"📝 Creating history for {len(overdue_loan_ids)} loans")
+
             # Create history records for overdue loans
             for loan_id in overdue_loan_ids:
                 history = LoanHistory(
@@ -440,8 +472,11 @@ class LoanRepository:
                     notes="Loan marked as overdue automatically"
                 )
                 self.session.add(history)
-        
+                logger.info(f"  ✅ Created history for loan_id={loan_id}")
+
         await self.session.commit()
+        logger.info(f"💾 Committed changes to database")
+
         return overdue_count
 
     async def get_loans_by_user(self, user_id: int, skip: int = 0, limit: int = 10) -> Tuple[List[DeviceLoan], int]:

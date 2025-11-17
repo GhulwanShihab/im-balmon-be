@@ -1,4 +1,4 @@
-"""Comprehensive device management endpoints."""
+"""Comprehensive device management endpoints with permission-based authorization."""
 
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
@@ -13,7 +13,13 @@ from src.schemas.device import (
     DeviceUsageFilter, DeviceUsageListResponse, DeviceUsageSummary,
     DeviceUsageStatistics
 )
-from src.auth.permissions import get_current_active_user, require_admin
+from src.auth.permissions import (
+    get_current_active_user, 
+    require_permission,
+    require_any_permission,
+    require_roles
+)
+from src.auth.role_permissions import Permission
 
 router = APIRouter()
 
@@ -23,7 +29,11 @@ async def get_device_service(session: AsyncSession = Depends(get_db)) -> DeviceS
     return DeviceService(device_repo)
 
 
-@router.get("/", response_model=DeviceListResponse)
+# ============================================================================
+# READ OPERATIONS - All authenticated users
+# ============================================================================
+
+@router.get("/", response_model=DeviceListResponse, dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_devices(
     device_name: Optional[str] = Query(None, description="Filter by device name"),
     device_code: Optional[str] = Query(None, description="Filter by device code"),
@@ -40,10 +50,14 @@ async def get_devices(
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get all devices with pagination and filtering."""
+    """
+    Get all devices with pagination and filtering.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     filters = {}
     if device_name:
         filters["device_name"] = device_name
@@ -72,209 +86,291 @@ async def get_devices(
     return await device_service.get_all_devices(skip, page_size, filters, sort_by, sort_order)
 
 
-@router.post("/", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
-async def create_device(
-    device_data: DeviceCreate,
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Create a new device (Admin only)."""
-    return await device_service.create_device(device_data)
-
-
-@router.get("/stats", response_model=DeviceStats)
+@router.get("/stats", response_model=DeviceStats, dependencies=[Depends(require_permission(Permission.DEVICE_STATS))])
 async def get_device_statistics(
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get device statistics (accessible to all logged users)."""
+    """
+    Get device statistics.
+    
+    **Permission Required:** DEVICE_STATS
+    **Roles:** admin, manager
+    """
     stats = await device_service.get_device_stats()
     return DeviceStats(**stats)
 
 
-
-@router.get("/search")
+@router.get("/search", dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def search_devices(
     q: str = Query(..., description="Search term"),
     limit: int = Query(10, ge=1, le=50, description="Maximum results"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Search devices by name, code, or NUP."""
+    """
+    Search devices by name, code, or NUP.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     return await device_service.search_devices(q, limit)
 
 
-@router.get("/condition/{condition}")
+@router.get("/condition/{condition}", dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_devices_by_condition(
     condition: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get devices by condition."""
+    """
+    Get devices by condition.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     skip = (page - 1) * page_size
     return await device_service.get_devices_by_condition(condition, skip, page_size)
 
 
-@router.get("/status/{status}")
+@router.get("/status/{status}", dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_devices_by_status(
     status: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get devices by status."""
+    """
+    Get devices by status.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     skip = (page - 1) * page_size
     return await device_service.get_devices_by_status(status, skip, page_size)
 
 
-@router.get("/room/{room}")
+@router.get("/room/{room}", dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_devices_by_room(
     room: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get devices by room."""
+    """
+    Get devices by room.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     skip = (page - 1) * page_size
     return await device_service.get_devices_by_room(room, skip, page_size)
 
 
-@router.get("/type/{device_type}")
+@router.get("/type/{device_type}", dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_devices_by_type(
     device_type: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get devices by type."""
+    """
+    Get devices by type.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     skip = (page - 1) * page_size
     return await device_service.get_devices_by_type(device_type, skip, page_size)
 
 
-@router.get("/code/{device_code}", response_model=DeviceResponse)
+@router.get("/code/{device_code}", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_device_by_code(
     device_code: str,
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get device by code."""
+    """
+    Get device by code.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     device = await device_service.get_device_by_code(device_code)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return device
 
 
-@router.get("/nup/{nup_device}", response_model=DeviceResponse)
+@router.get("/nup/{nup_device}", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
 async def get_device_by_nup(
     nup_device: str,
-    current_user: dict = Depends(get_current_active_user),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get device by NUP."""
+    """
+    Get device by NUP.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
     device = await device_service.get_device_by_nup(nup_device)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return device
 
-@router.post("/{device_id}/photos", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
+
+@router.get("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
+async def get_device_by_id(
+    device_id: int,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Get device by ID.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
+    device = await device_service.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return DeviceResponse.model_validate(device)
+
+
+@router.get("/{device_id}/photos", response_model=List[str], dependencies=[Depends(require_permission(Permission.DEVICE_VIEW))])
+async def get_device_photos(
+    device_id: int,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Retrieve all photo URLs for a given device.
+    
+    **Permission Required:** DEVICE_VIEW
+    **Roles:** admin, manager, user
+    """
+    return await device_service.get_device_photos(device_id)
+
+
+# ============================================================================
+# CREATE OPERATIONS - Admin only
+# ============================================================================
+
+@router.post("/", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_CREATE))])
+async def create_device(
+    device_data: DeviceCreate,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Create a new device.
+    
+    **Permission Required:** DEVICE_CREATE
+    **Roles:** admin only
+    """
+    return await device_service.create_device(device_data)
+
+
+@router.post("/{device_id}/photos", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_UPDATE))])
 async def upload_device_photo(
     device_id: int,
     file: UploadFile = File(...),
     device_service: DeviceService = Depends(get_device_service)
 ):
     """
-    Upload a photo for a device (Admin only).
+    Upload a photo for a device.
     Stores file in static/uploads/devices/ and updates device record.
+    
+    **Permission Required:** DEVICE_UPDATE
+    **Roles:** admin only
     """
     return await device_service.upload_device_photo(device_id, file)
 
 
-@router.delete("/{device_id}/photos/{filename}", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
+# ============================================================================
+# UPDATE OPERATIONS - Admin only
+# ============================================================================
+
+@router.put("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_UPDATE))])
+async def update_device(
+    device_id: int,
+    device_data: DeviceUpdate,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Update device information.
+    
+    **Permission Required:** DEVICE_UPDATE
+    **Roles:** admin only
+    """
+    return await device_service.update_device(device_id, device_data)
+
+
+@router.put("/{device_id}/condition", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_UPDATE))])
+async def update_device_condition(
+    device_id: int,
+    condition_data: DeviceConditionUpdate,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Update device condition.
+    
+    **Permission Required:** DEVICE_UPDATE
+    **Roles:** admin only
+    """
+    return await device_service.update_device_condition(device_id, condition_data)
+
+
+@router.put("/{device_id}/status", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_UPDATE))])
+async def update_device_status(
+    device_id: int,
+    status_data: DeviceStatusUpdate,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Update device status.
+    
+    **Permission Required:** DEVICE_UPDATE
+    **Roles:** admin only
+    """
+    return await device_service.update_device_status(device_id, status_data)
+
+
+# ============================================================================
+# DELETE OPERATIONS - Admin only
+# ============================================================================
+
+@router.delete("/{device_id}", dependencies=[Depends(require_permission(Permission.DEVICE_DELETE))])
+async def delete_device(
+    device_id: int,
+    device_service: DeviceService = Depends(get_device_service)
+):
+    """
+    Delete device (hard delete).
+    
+    **Permission Required:** DEVICE_DELETE
+    **Roles:** admin only
+    """
+    success = await device_service.delete_device(device_id)
+    return {"message": "Device deleted successfully"}
+
+
+@router.delete("/{device_id}/photos/{filename}", response_model=DeviceResponse, dependencies=[Depends(require_permission(Permission.DEVICE_UPDATE))])
 async def delete_device_photo(
     device_id: int,
     filename: str,
     device_service: DeviceService = Depends(get_device_service)
 ):
     """
-    Delete a specific photo of a device by filename (Admin only).
+    Delete a specific photo of a device by filename.
     Removes both database record and file from storage.
+    
+    **Permission Required:** DEVICE_UPDATE
+    **Roles:** admin only
     """
     return await device_service.delete_device_photo(device_id, filename)
 
 
-@router.get("/{device_id}/photos", response_model=List[str])
-async def get_device_photos(
-    device_id: int,
-    current_user: dict = Depends(get_current_active_user),
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """
-    Retrieve all photo URLs for a given device (accessible to all logged-in users).
-    """
-    return await device_service.get_device_photos(device_id)
+# ============================================================================
+# DEVICE USAGE STATISTICS - Admin and Manager
+# ============================================================================
 
-@router.get("/{device_id}", response_model=DeviceResponse)
-async def get_device_by_id(
-    device_id: int,
-    current_user: dict = Depends(get_current_active_user),
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Get device by ID."""
-    device = await device_service.get_device(device_id)
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    # ✅ Pastikan dikonversi ke schema agar serialization konsisten
-    return DeviceResponse.model_validate(device)
-
-
-@router.put("/{device_id}", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
-async def update_device(
-    device_id: int,
-    device_data: DeviceUpdate,
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Update device information (Admin only)."""
-    return await device_service.update_device(device_id, device_data)
-
-
-@router.put("/{device_id}/condition", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
-async def update_device_condition(
-    device_id: int,
-    condition_data: DeviceConditionUpdate,
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Update device condition (Admin only)."""
-    return await device_service.update_device_condition(device_id, condition_data)
-
-
-@router.put("/{device_id}/status", response_model=DeviceResponse, dependencies=[Depends(require_admin)])
-async def update_device_status(
-    device_id: int,
-    status_data: DeviceStatusUpdate,
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Update device status (Admin only)."""
-    return await device_service.update_device_status(device_id, status_data)
-
-
-@router.delete("/{device_id}", dependencies=[Depends(require_admin)])
-async def delete_device(
-    device_id: int,
-    device_service: DeviceService = Depends(get_device_service)
-):
-    """Delete device (hard delete, Admin only)."""
-    success = await device_service.delete_device(device_id)
-    return {"message": "Device deleted successfully"}
-
-
-# Device Usage Statistics Endpoints (Admin Only)
-
-@router.get("/usage/statistics", response_model=DeviceUsageListResponse)
+@router.get("/usage/statistics", response_model=DeviceUsageListResponse, dependencies=[Depends(require_permission(Permission.DEVICE_USAGE_STATS))])
 async def get_device_usage_statistics(
     device_name: Optional[str] = Query(None, description="Filter by device name"),
     nup_device: Optional[str] = Query(None, description="Filter by NUP device"),
@@ -291,13 +387,16 @@ async def get_device_usage_statistics(
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: dict = Depends(require_admin),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get comprehensive device usage statistics (Admin only)."""
+    """
+    Get comprehensive device usage statistics.
+    
+    **Permission Required:** DEVICE_USAGE_STATS
+    **Roles:** admin, manager
+    """
     from datetime import date as date_type
     
-    # Parse date strings if provided
     last_used_from_date = None
     last_used_to_date = None
     
@@ -340,41 +439,57 @@ async def get_device_usage_statistics(
     return await device_service.get_device_usage_statistics(usage_filter)
 
 
-@router.get("/usage/summary", response_model=DeviceUsageSummary)
+@router.get("/usage/summary", response_model=DeviceUsageSummary, dependencies=[Depends(require_permission(Permission.DEVICE_USAGE_STATS))])
 async def get_device_usage_summary(
-    current_user: dict = Depends(require_admin),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get device usage summary statistics (Admin only)."""
+    """
+    Get device usage summary statistics.
+    
+    **Permission Required:** DEVICE_USAGE_STATS
+    **Roles:** admin, manager
+    """
     return await device_service.get_device_usage_summary()
 
 
-@router.get("/usage/never-used", response_model=List[DeviceResponse])
+@router.get("/usage/never-used", response_model=List[DeviceResponse], dependencies=[Depends(require_permission(Permission.DEVICE_USAGE_STATS))])
 async def get_never_used_devices(
-    current_user: dict = Depends(require_admin),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get list of devices that have never been used in loans (Admin only)."""
+    """
+    Get list of devices that have never been used in loans.
+    
+    **Permission Required:** DEVICE_USAGE_STATS
+    **Roles:** admin, manager
+    """
     return await device_service.get_never_used_devices()
 
 
-@router.get("/usage/most-used", response_model=List[DeviceUsageStatistics])
+@router.get("/usage/most-used", response_model=List[DeviceUsageStatistics], dependencies=[Depends(require_permission(Permission.DEVICE_USAGE_STATS))])
 async def get_most_used_devices(
     limit: int = Query(10, ge=1, le=50, description="Number of devices to return"),
-    current_user: dict = Depends(require_admin),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get most used devices based on total usage days (Admin only)."""
+    """
+    Get most used devices based on total usage days.
+    
+    **Permission Required:** DEVICE_USAGE_STATS
+    **Roles:** admin, manager
+    """
     return await device_service.get_most_used_devices(limit)
 
 
-@router.get("/usage/{device_id}/history", response_model=Dict)
+@router.get("/usage/{device_id}/history", response_model=Dict, dependencies=[Depends(require_permission(Permission.DEVICE_USAGE_STATS))])
 async def get_device_usage_history(
     device_id: int,
-    current_user: dict = Depends(require_admin),
     device_service: DeviceService = Depends(get_device_service)
 ):
-    """Get detailed usage history for a specific device (Admin only)."""
+    """
+    Get detailed usage history for a specific device.
+    
+    **Permission Required:** DEVICE_USAGE_STATS
+    **Roles:** admin, manager
+    """
     device = await device_service.get_device(device_id)
     if not device:
         raise HTTPException(
@@ -382,11 +497,9 @@ async def get_device_usage_history(
             detail="Device not found"
         )
     
-    # Get device usage statistics for this specific device
     usage_filter = DeviceUsageFilter(page=1, page_size=1)
     usage_stats = await device_service.get_device_usage_statistics(usage_filter)
     
-    # Find the specific device in the results
     device_stats = None
     for device_stat in usage_stats.devices:
         if device_stat.device_id == device_id:
@@ -394,7 +507,6 @@ async def get_device_usage_history(
             break
     
     if not device_stats:
-        # Create empty stats if device has no usage
         device_stats = DeviceUsageStatistics(
             device_id=device.id,
             nup_device=device.nup_device,
@@ -417,4 +529,3 @@ async def get_device_usage_history(
         "usage_statistics": device_stats,
         "message": "Device usage history retrieved successfully"
     }
-

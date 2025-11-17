@@ -1,4 +1,4 @@
-"""Device loan management endpoints."""
+"""Device loan management endpoints with permission-based authorization."""
 import os
 from typing import Optional, List
 from datetime import date, datetime
@@ -18,7 +18,8 @@ from ...schemas.loan import (
     DeviceLoanResponse, DeviceLoanListResponse, DeviceLoanFilter, DeviceLoanStats,
     LoanHistoryResponse, LoanStatus, DeviceConditionChangeRequestResponse, DeviceLoanItemBase,
 )
-from ...auth.permissions import get_current_active_user, require_admin
+from ...auth.permissions import get_current_active_user, require_permission
+from ...auth.role_permissions import Permission
 from ...models.perangkat import Device
 from ...models.loan import LoanStatus as LoanStatusEnum, DeviceConditionChangeRequest, ConditionChangeStatus, DeviceLoanItem
 
@@ -35,29 +36,33 @@ def get_loan_pdf_service() -> LoanPDFService:
     """Get PDF service dependency."""
     return LoanPDFService()
 
-# @router.post("/validate-assignment-letter", response_model=AssignmentLetterValidationResponse)
-# async def validate_assignment_letter_number(
-#     data: AssignmentLetterValidation,
-#     current_user: dict = Depends(get_current_active_user),
-#     loan_service: LoanService = Depends(get_loan_service)
-# ):
-#     """Validate assignment letter number format."""
-#     return await loan_service.validate_assignment_letter_number(data)
 
+# ============================================================================
+# CREATE OPERATIONS - All authenticated users
+# ============================================================================
 
-@router.post("/", response_model=DeviceLoanResponse)
+@router.post("/", response_model=DeviceLoanResponse, dependencies=[Depends(require_permission(Permission.LOAN_CREATE))])
 async def create_loan(
     loan_data: DeviceLoanCreate,
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Create a new device loan (auto-activated)."""
+    """
+    Create a new device loan (auto-activated).
+    
+    **Permission Required:** LOAN_CREATE
+    **Roles:** admin, user
+    """
     import json
     print("📦 Loan data diterima dari frontend:")
     print(json.dumps(loan_data.dict(), indent=2, default=str))
     
     return await loan_service.create_loan(loan_data, current_user["id"])
 
+
+# ============================================================================
+# READ OPERATIONS
+# ============================================================================
 
 @router.get("/", response_model=DeviceLoanListResponse)
 async def get_loans(
@@ -78,7 +83,23 @@ async def get_loans(
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get loans with filtering and pagination."""
+    """
+    Get loans with filtering and pagination.
+    
+    **Permission Required:** 
+    - LOAN_VIEW_ALL (admin, manager) - see all loans
+    - LOAN_VIEW (user) - see own loans only
+    
+    **Roles:** admin, manager, user
+    """
+    # Check if user has permission to view all loans
+    user_roles = current_user.get("roles", [])
+    user_permissions = current_user.get("permissions", [])
+    
+    # If user doesn't have LOAN_VIEW_ALL, filter to show only their loans
+    if Permission.LOAN_VIEW_ALL.value not in user_permissions:
+        borrower_user_id = current_user["id"]
+    
     filters = DeviceLoanFilter(
         status=status,
         borrower_name=borrower_name,
@@ -99,41 +120,64 @@ async def get_loans(
     return await loan_service.get_loans(filters)
 
 
-@router.get("/my-loans", response_model=DeviceLoanListResponse)
+@router.get("/my-loans", response_model=DeviceLoanListResponse, dependencies=[Depends(require_permission(Permission.LOAN_VIEW))])
 async def get_my_loans(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get current user's loan history."""
+    """
+    Get current user's loan history.
+    
+    **Permission Required:** LOAN_VIEW
+    **Roles:** admin, user
+    """
     return await loan_service.get_my_loans(current_user["id"], page, page_size)
 
 
-@router.get("/overdue", response_model=List[DeviceLoanResponse])
+@router.get("/overdue", response_model=List[DeviceLoanResponse], dependencies=[Depends(require_permission(Permission.LOAN_VIEW_ALL))])
 async def get_overdue_loans(
-    current_user: dict = Depends(require_admin),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get all overdue loans (Admin only)."""
+    """
+    Get all overdue loans.
+    
+    **Permission Required:** LOAN_VIEW_ALL
+    **Roles:** admin, manager
+    """
     return await loan_service.get_overdue_loans()
 
 
-@router.get("/stats", response_model=DeviceLoanStats)
+@router.get("/stats", response_model=DeviceLoanStats, dependencies=[Depends(require_permission(Permission.LOAN_STATS))])
 async def get_loan_stats(
-    current_user: dict = Depends(require_admin),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get loan statistics (Admin only)."""
+    """
+    Get loan statistics.
+    
+    **Permission Required:** LOAN_STATS
+    **Roles:** admin, manager
+    """
     return await loan_service.get_loan_stats()
+
 
 @router.get("/condition-change-requests", response_model=List[DeviceConditionChangeRequestResponse])
 async def list_condition_change_requests(
     session: AsyncSession = Depends(get_db),
     loan_id: Optional[int] = None,
-    current_user: dict = Depends(get_current_active_user)  # ✅ Add auth
+    current_user: dict = Depends(get_current_active_user)
 ):
-    """✅ FIXED: List condition change requests with proper joins."""
+    """
+    List condition change requests with proper joins.
+    
+    **Permission Required:** 
+    - LOAN_VIEW_ALL (admin, manager) - see all requests
+    - LOAN_VIEW (user) - see own loan requests only
+    
+    **Roles:** admin, manager, user
+    """
+    user_permissions = current_user.get("permissions", [])
     
     query = (
         select(DeviceConditionChangeRequest)
@@ -142,17 +186,23 @@ async def list_condition_change_requests(
             selectinload(DeviceConditionChangeRequest.child_device),
             selectinload(DeviceConditionChangeRequest.requested_by),
             selectinload(DeviceConditionChangeRequest.reviewed_by),
-            selectinload(DeviceConditionChangeRequest.loan_item)  # ✅ Add this
+            selectinload(DeviceConditionChangeRequest.loan_item)
         )
         .order_by(DeviceConditionChangeRequest.requested_at.desc())
     )
 
-    # ✅ FIXED: Proper filter by loan_id
+    # Filter by loan_id if provided
     if loan_id:
         query = query.where(
             DeviceConditionChangeRequest.loan_item.has(
                 DeviceLoanItem.loan_id == loan_id
             )
+        )
+    
+    # If user doesn't have LOAN_VIEW_ALL, filter to show only their requests
+    if Permission.LOAN_VIEW_ALL.value not in user_permissions:
+        query = query.where(
+            DeviceConditionChangeRequest.requested_by_user_id == current_user["id"]
         )
 
     result = await session.execute(query)
@@ -183,13 +233,22 @@ async def list_condition_change_requests(
         for req in requests
     ]
 
+
 @router.get("/{loan_id}", response_model=DeviceLoanResponse)
 async def get_loan(
     loan_id: int,
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get loan details by ID."""
+    """
+    Get loan details by ID.
+    
+    **Permission Required:** 
+    - LOAN_VIEW_ALL (admin, manager) - see any loan
+    - LOAN_VIEW (user) - see own loans only
+    
+    **Roles:** admin, manager, user
+    """
     loan = await loan_service.get_loan(loan_id)
     if not loan:
         raise HTTPException(
@@ -197,9 +256,9 @@ async def get_loan(
             detail="Loan not found"
         )
     
-    # Check if user can access this loan (own loan or admin)
-    user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    # Check if user can access this loan
+    user_permissions = current_user.get("permissions", [])
+    if Permission.LOAN_VIEW_ALL.value not in user_permissions and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -208,74 +267,21 @@ async def get_loan(
     return loan
 
 
-@router.put("/{loan_id}", response_model=DeviceLoanResponse)
-async def update_loan(
-    loan_id: int,
-    loan_data: DeviceLoanUpdate,
-    current_user: dict = Depends(get_current_active_user),
-    loan_service: LoanService = Depends(get_loan_service)
-):
-    """Update loan (only active loans, limited fields)."""
-    # Check if user can update this loan
-    loan = await loan_service.get_loan(loan_id)
-    if not loan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Loan not found"
-        )
-    
-    user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
-    
-    return await loan_service.update_loan(loan_id, loan_data, current_user["id"])
-
-
-@router.post("/{loan_id}/return", response_model=DeviceLoanResponse)
-async def return_loan(
-    loan_id: int,
-    return_data: DeviceLoanReturn,
-    current_user: dict = Depends(get_current_active_user),
-    loan_service: LoanService = Depends(get_loan_service)
-):
-    """Return a loan (user or admin)."""
-    import json
-    print("📦 Return data diterima dari frontend:")
-    print(json.dumps(return_data.dict(), indent=2, default=str))
-
-    loan = await loan_service.get_loan(loan_id)
-    if not loan:
-        raise HTTPException(status_code=404, detail="Loan not found")
-
-    user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    return await loan_service.return_loan(loan_id, return_data, current_user["id"])
-
-
-@router.post("/{loan_id}/cancel", response_model=DeviceLoanResponse)
-async def cancel_loan(
-    loan_id: int,
-    cancel_data: DeviceLoanCancel,
-    current_user: dict = Depends(require_admin),
-    loan_service: LoanService = Depends(get_loan_service)
-):
-    """Cancel an active loan (Admin only)."""
-    return await loan_service.cancel_loan(loan_id, cancel_data, current_user["id"])
-
-
 @router.get("/{loan_id}/history", response_model=List[LoanHistoryResponse])
 async def get_loan_history(
     loan_id: int,
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Get loan status change history."""
-    # Check if user can access this loan's history
+    """
+    Get loan status change history.
+    
+    **Permission Required:** 
+    - LOAN_VIEW_ALL (admin, manager) - see any loan history
+    - LOAN_VIEW (user) - see own loan history only
+    
+    **Roles:** admin, manager, user
+    """
     loan = await loan_service.get_loan(loan_id)
     if not loan:
         raise HTTPException(
@@ -283,8 +289,9 @@ async def get_loan_history(
             detail="Loan not found"
         )
     
-    user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    # Check if user can access this loan's history
+    user_permissions = current_user.get("permissions", [])
+    if Permission.LOAN_VIEW_ALL.value not in user_permissions and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -293,7 +300,7 @@ async def get_loan_history(
     return await loan_service.get_loan_history(loan_id)
 
 
-@router.post("/check-device-availability")
+@router.post("/check-device-availability", dependencies=[Depends(require_permission(Permission.LOAN_VIEW))])
 async def check_device_availability(
     device_id: int = Query(..., description="Device ID to check"),
     start_date: date = Query(..., description="Loan start date"),
@@ -302,7 +309,12 @@ async def check_device_availability(
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Check if a device is available for a given period."""
+    """
+    Check if a device is available for a given period.
+    
+    **Permission Required:** LOAN_VIEW
+    **Roles:** admin, user
+    """
     is_available = await loan_service.check_device_availability(
         device_id, start_date, end_date, exclude_loan_id
     )
@@ -316,23 +328,95 @@ async def check_device_availability(
     }
 
 
-@router.delete("/{loan_id}")
-async def delete_loan(
+# ============================================================================
+# UPDATE OPERATIONS
+# ============================================================================
+
+@router.put("/{loan_id}", response_model=DeviceLoanResponse, dependencies=[Depends(require_permission(Permission.LOAN_UPDATE))])
+async def update_loan(
     loan_id: int,
-    current_user: dict = Depends(require_admin),
+    loan_data: DeviceLoanUpdate,
+    current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Soft delete a loan (Admin only)."""
-    success = await loan_service.delete_loan(loan_id, current_user["id"])
-    if not success:
+    """
+    Update loan (only active loans, limited fields).
+    
+    **Permission Required:** LOAN_UPDATE
+    **Roles:** admin, user (own loans only)
+    """
+    loan = await loan_service.get_loan(loan_id)
+    if not loan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Loan not found"
         )
     
-    return {"message": "Loan deleted successfully"}
+    # Check if user can update this loan
+    user_roles = current_user.get("roles", [])
+    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    return await loan_service.update_loan(loan_id, loan_data, current_user["id"])
 
-@router.get("/{loan_id}/export-pdf", response_class=FileResponse)
+
+@router.post("/{loan_id}/return", response_model=DeviceLoanResponse, dependencies=[Depends(require_permission(Permission.LOAN_RETURN))])
+async def return_loan(
+    loan_id: int,
+    return_data: DeviceLoanReturn,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service)
+):
+    """
+    Return a loan.
+    
+    **Permission Required:** LOAN_RETURN
+    **Roles:** admin, user (own loans only)
+    """
+    import json
+    print("📦 Return data diterima dari frontend:")
+    print(json.dumps(return_data.dict(), indent=2, default=str))
+
+    loan = await loan_service.get_loan(loan_id)
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    # Check if user can return this loan
+    user_roles = current_user.get("roles", [])
+    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return await loan_service.return_loan(loan_id, return_data, current_user["id"])
+
+
+@router.post("/{loan_id}/cancel", response_model=DeviceLoanResponse, dependencies=[Depends(require_permission(Permission.LOAN_CANCEL))])
+async def cancel_loan(
+    loan_id: int,
+    cancel_data: DeviceLoanCancel,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service)
+):
+    """
+    Cancel an active loan.
+    
+    **Permission Required:** LOAN_CANCEL
+    **Roles:** admin, manager
+    """
+    return await loan_service.cancel_loan(loan_id, cancel_data, current_user["id"])
+
+
+# Continued in Part 2...
+
+# Continuation from Part 1...
+
+# ============================================================================
+# PDF EXPORT OPERATIONS
+# ============================================================================
+
+@router.get("/{loan_id}/export-pdf", response_class=FileResponse, dependencies=[Depends(require_permission(Permission.EXPORT_PDF))])
 async def export_loan_pdf(
     loan_id: int,
     current_user: dict = Depends(get_current_active_user),
@@ -342,6 +426,9 @@ async def export_loan_pdf(
     """
     Export loan document as PDF (Berita Acara Penggunaan Peralatan Monitoring).
     
+    **Permission Required:** EXPORT_PDF
+    **Roles:** admin, user (own loans only)
+    
     This endpoint generates a formatted PDF document for the loan record.
     The PDF includes:
     - Official header with organization info
@@ -349,8 +436,6 @@ async def export_loan_pdf(
     - Device list in table format
     - Terms and conditions
     - Signature sections for all parties
-    
-    Access: All authenticated users can export their own loans, admins can export any loan.
     """
     
     # Get loan data from service
@@ -362,8 +447,8 @@ async def export_loan_pdf(
         )
     
     # Check access permission
-    user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    user_permissions = current_user.get("permissions", [])
+    if Permission.LOAN_VIEW_ALL.value not in user_permissions and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -431,8 +516,8 @@ async def export_loan_pdf(
             detail=f"Failed to generate PDF: {str(e)}"
         )
 
-# Alternative endpoint for generating PDF and returning path (for frontend download)
-@router.post("/{loan_id}/generate-pdf")
+
+@router.post("/{loan_id}/generate-pdf", dependencies=[Depends(require_permission(Permission.EXPORT_PDF))])
 async def generate_loan_pdf(
     loan_id: int,
     current_user: dict = Depends(get_current_active_user),
@@ -441,6 +526,9 @@ async def generate_loan_pdf(
 ):
     """
     Generate PDF and return file path for download.
+    
+    **Permission Required:** EXPORT_PDF
+    **Roles:** admin, user (own loans only)
     
     This is an alternative endpoint that generates the PDF and returns
     the file path, allowing frontend to handle the download separately.
@@ -469,12 +557,57 @@ async def generate_loan_pdf(
         "download_url": f"/api/loans/{loan_id}/export-pdf"
     }
 
-@router.post("/mark-overdue")
+
+# ============================================================================
+# CONDITION CHANGE OPERATIONS
+# ============================================================================
+
+@router.post("/condition-change/{request_id}/approve", dependencies=[Depends(require_permission(Permission.LOAN_CONDITION_APPROVE))])
+async def approve_condition_change(
+    request_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service),
+):
+    """
+    Admin approves condition change request.
+    
+    **Permission Required:** LOAN_CONDITION_APPROVE
+    **Roles:** admin, manager
+    """
+    return await loan_service.approve_condition_change(request_id, current_user["id"])
+
+
+@router.post("/condition-change/{request_id}/reject", dependencies=[Depends(require_permission(Permission.LOAN_CONDITION_APPROVE))])
+async def reject_condition_change(
+    request_id: int,
+    reason: str = Query(..., description="Reason for rejection"),
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service),
+):
+    """
+    Admin rejects condition change request.
+    
+    **Permission Required:** LOAN_CONDITION_APPROVE
+    **Roles:** admin, manager
+    """
+    return await loan_service.reject_condition_change(request_id, reason, current_user["id"])
+
+
+# ============================================================================
+# ADMIN OPERATIONS
+# ============================================================================
+
+@router.post("/mark-overdue", dependencies=[Depends(require_permission(Permission.LOAN_APPROVE))])
 async def mark_overdue_loans(
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Mark loans as overdue (Admin only, for scheduled tasks)."""
+    """
+    Mark loans as overdue (for scheduled tasks).
+    
+    **Permission Required:** LOAN_APPROVE
+    **Roles:** admin only
+    """
     count = await loan_service.mark_overdue_loans()
     return {
         "message": f"Marked {count} loans as overdue",
@@ -482,22 +615,23 @@ async def mark_overdue_loans(
     }
 
 
-@router.post("/condition-change/{request_id}/approve")
-async def approve_condition_change(
-    request_id: int,
-    current_user: dict = Depends(require_admin),
-    loan_service: LoanService = Depends(get_loan_service),
+@router.delete("/{loan_id}", dependencies=[Depends(require_permission(Permission.LOAN_DELETE))])
+async def delete_loan(
+    loan_id: int,
+    current_user: dict = Depends(get_current_active_user),
+    loan_service: LoanService = Depends(get_loan_service)
 ):
-    """Admin approves condition change request."""
-    return await loan_service.approve_condition_change(request_id, current_user["id"])
-
-
-@router.post("/condition-change/{request_id}/reject")
-async def reject_condition_change(
-    request_id: int,
-    reason: str = Query(..., description="Reason for rejection"),
-    current_user: dict = Depends(require_admin),
-    loan_service: LoanService = Depends(get_loan_service),
-):
-    """Admin rejects condition change request."""
-    return await loan_service.reject_condition_change(request_id, reason, current_user["id"])
+    """
+    Soft delete a loan.
+    
+    **Permission Required:** LOAN_DELETE
+    **Roles:** admin only
+    """
+    success = await loan_service.delete_loan(loan_id, current_user["id"])
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Loan not found"
+        )
+    
+    return {"message": "Loan deleted successfully"}

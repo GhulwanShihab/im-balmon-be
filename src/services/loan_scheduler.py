@@ -17,12 +17,14 @@ class LoanScheduler:
     async def mark_overdue_loans_job(self):
         """Job untuk mark loans yang sudah overdue."""
         try:
-            from src.core.database import get_async_session
+            # ✅ PERBAIKAN: Import async_session (bukan async_session_maker)
+            from src.core.database import async_session
             from src.repositories.loan import LoanRepository
             
             logger.info("🔄 Running scheduled job: Mark overdue loans")
             
-            async with get_async_session() as session:
+            # ✅ PERBAIKAN: Gunakan async_session() sebagai context manager
+            async with async_session() as session:
                 loan_repo = LoanRepository(session)
                 count = await loan_repo.mark_overdue_loans()
                 
@@ -33,6 +35,8 @@ class LoanScheduler:
                 
         except Exception as e:
             logger.error(f"❌ Error in mark_overdue_loans_job: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def start(self):
         """Start scheduler dengan jobs."""
@@ -40,16 +44,16 @@ class LoanScheduler:
         # ✅ Job 1: Mark overdue loans setiap hari jam 00:01
         self.scheduler.add_job(
             self.mark_overdue_loans_job,
-            trigger=CronTrigger(hour=0, minute=1),  # Setiap hari jam 00:01
+            trigger=CronTrigger(hour=0, minute=1),
             id="mark_overdue_loans",
             name="Mark Overdue Loans",
             replace_existing=True
         )
         
-        # ✅ Optional: Job 2 untuk check setiap 6 jam
+        # ✅ Job 2: Check setiap 1 jam
         self.scheduler.add_job(
             self.mark_overdue_loans_job,
-            trigger=CronTrigger(hour="*/6"),  # Setiap 6 jam
+            trigger=CronTrigger(hour="*/1"),
             id="mark_overdue_loans_hourly",
             name="Mark Overdue Loans (Hourly Check)",
             replace_existing=True
@@ -58,7 +62,7 @@ class LoanScheduler:
         self.scheduler.start()
         logger.info("✅ Loan Scheduler started successfully")
         logger.info("   - Daily check at 00:01")
-        logger.info("   - Hourly check every 6 hours")
+        logger.info("   - Hourly check every 1 hour")
     
     def shutdown(self):
         """Shutdown scheduler dengan graceful."""

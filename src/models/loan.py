@@ -161,13 +161,20 @@ class LoanHistory(BaseModel, SQLModel, table=True):
     new_status: LoanStatus = Field(sa_column=Column(SQLEnum(LoanStatus)))
     
     change_reason: Optional[str] = Field(None, description="Alasan perubahan status")
-    changed_by_user_id: int = Field(foreign_key="users.id", description="User yang mengubah")
+    
+    # ✅ PERBAIKAN: Allow NULL untuk system updates
+    changed_by_user_id: Optional[int] = Field(
+        default=None, 
+        foreign_key="users.id", 
+        description="User yang mengubah (NULL untuk system)"
+    )
+    
     change_date: datetime = Field(default_factory=datetime.utcnow, description="Tanggal perubahan")
     
     # Additional notes
     notes: Optional[str] = Field(None, description="Catatan tambahan")
     
-    # ✅ STRING ANNOTATIONS
+    # Relationships
     loan: Optional["DeviceLoan"] = Relationship(back_populates="loan_history")
     changed_by: Optional["User"] = Relationship()
 

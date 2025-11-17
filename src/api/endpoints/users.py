@@ -1,4 +1,4 @@
-"""Comprehensive user management endpoints."""
+"""Comprehensive user management endpoints with permission control."""
 
 from typing import Optional
 from datetime import datetime
@@ -13,13 +13,16 @@ from src.schemas.user import (
     UserSearchFilter, UserStatusUpdate, UserRoleUpdate, 
     UserWithRoles, RoleResponse, UserAccountStatus, UserStats
 )
-from src.auth.permissions import get_current_active_user, require_admin
+from src.auth.permissions import (
+    get_current_active_user, 
+    require_permission,
+    require_any_permission,
+    require_roles
+)
+from src.auth.role_permissions import Permission
 
 router = APIRouter()
 
-# --------------------------------------------------------------------------
-# Dependencies
-# --------------------------------------------------------------------------
 
 async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserService:
     """Dependency untuk mendapatkan service user."""
@@ -27,16 +30,21 @@ async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserServi
     return UserService(user_repo)
 
 
-# --------------------------------------------------------------------------
-# Current user endpoints
-# --------------------------------------------------------------------------
+# ============================================================================
+# CURRENT USER ENDPOINTS - All authenticated users
+# ============================================================================
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get current user information."""
+    """
+    Get current user information.
+    
+    **Permission Required:** USER_VIEW
+    **Roles:** admin, manager, user
+    """
     user = await user_service.get_user(current_user["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -48,7 +56,12 @@ async def get_current_user_with_roles(
     current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get current user information with roles."""
+    """
+    Get current user information with roles.
+    
+    **Permission Required:** USER_VIEW
+    **Roles:** admin, manager, user
+    """
     return await user_service.get_user_with_roles(current_user["id"])
 
 
@@ -58,15 +71,20 @@ async def update_current_user(
     current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Update current user information."""
+    """
+    Update current user information.
+    
+    **Permission Required:** USER_UPDATE (own profile)
+    **Roles:** admin, manager, user
+    """
     return await user_service.update_user(current_user["id"], user_data)
 
 
-# --------------------------------------------------------------------------
-# Admin-only endpoints
-# --------------------------------------------------------------------------
+# ============================================================================
+# VIEW ENDPOINTS - Admin and Manager
+# ============================================================================
 
-@router.get("/", response_model=UserListResponse, dependencies=[Depends(require_admin)])
+@router.get("/", response_model=UserListResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_users(
     email: Optional[str] = Query(None, description="Filter by email"),
     username: Optional[str] = Query(None, description="Filter by username"),
@@ -79,7 +97,12 @@ async def get_users(
     sort_order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get all users with pagination and filtering (Admin only)."""
+    """
+    Get all users with pagination and filtering.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     filters = {}
     if email:
         filters["email"] = email
@@ -96,104 +119,158 @@ async def get_users(
     return await user_service.get_all_users(skip, page_size, filters, sort_by, sort_order)
 
 
-@router.post("/", response_model=UserResponse, dependencies=[Depends(require_admin)])
-async def create_user(
-    user_data: UserCreate,
-    user_service: UserService = Depends(get_user_service)
-):
-    """Create a new user (Admin only)."""
-    return await user_service.create_user(user_data)
-
-
-@router.get("/stats", response_model=UserStats, dependencies=[Depends(require_admin)])
+@router.get("/stats", response_model=UserStats, dependencies=[Depends(require_permission(Permission.USER_STATS))])
 async def get_user_statistics(
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get user statistics (Admin only)."""
+    """
+    Get user statistics.
+    
+    **Permission Required:** USER_STATS
+    **Roles:** admin, manager
+    """
     stats = await user_service.get_user_stats()
     return UserStats(**stats)
 
 
-@router.get("/roles", response_model=list[RoleResponse], dependencies=[Depends(require_admin)])
+@router.get("/roles", response_model=list[RoleResponse], dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_all_roles(
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get all available roles (Admin only)."""
+    """
+    Get all available roles.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     return await user_service.get_all_roles()
 
 
-@router.get("/pending", response_model=UserListResponse, dependencies=[Depends(require_admin)])
+@router.get("/pending", response_model=UserListResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_pending_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get all pending users waiting for admin approval (Admin only)."""
+    """
+    Get all pending users waiting for approval.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     filters = {"is_active": False, "is_verified": False}
     skip = (page - 1) * page_size
     return await user_service.get_all_users(skip, page_size, filters, "created_at", "asc")
 
 
-@router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_admin)])
+@router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_user_by_id(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get user by ID (Admin only)."""
+    """
+    Get user by ID.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@router.get("/{user_id}/roles", response_model=UserWithRoles, dependencies=[Depends(require_admin)])
+@router.get("/{user_id}/roles", response_model=UserWithRoles, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_user_with_roles(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get user with their roles (Admin only)."""
+    """
+    Get user with their roles.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     return await user_service.get_user_with_roles(user_id)
 
 
-@router.get("/{user_id}/status", response_model=UserAccountStatus, dependencies=[Depends(require_admin)])
+@router.get("/{user_id}/status", response_model=UserAccountStatus, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_user_account_status(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Get detailed user account status (Admin only)."""
+    """
+    Get detailed user account status.
+    
+    **Permission Required:** USER_VIEW_ALL
+    **Roles:** admin, manager
+    """
     return await user_service.get_user_account_status(user_id)
 
 
-@router.put("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_admin)])
+# ============================================================================
+# CREATE/UPDATE/DELETE ENDPOINTS - Admin only
+# ============================================================================
+
+@router.post("/", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_CREATE))])
+async def create_user(
+    user_data: UserCreate,
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Create a new user.
+    
+    **Permission Required:** USER_CREATE
+    **Roles:** admin only
+    """
+    return await user_service.create_user(user_data)
+
+
+@router.put("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Update user information (Admin only)."""
+    """
+    Update user information.
+    
+    **Permission Required:** USER_UPDATE
+    **Roles:** admin only
+    """
     return await user_service.update_user(user_id, user_data)
 
 
-@router.put("/{user_id}/status", response_model=UserResponse, dependencies=[Depends(require_admin)])
+@router.put("/{user_id}/status", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user_status(
     user_id: int,
     status_data: UserStatusUpdate,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Update user active status (Admin only)."""
+    """
+    Update user active status.
+    
+    **Permission Required:** USER_UPDATE
+    **Roles:** admin only
+    """
     return await user_service.update_user_status(user_id, status_data.is_active)
 
 
-@router.put("/{user_id}/roles", response_model=UserResponse, dependencies=[Depends(require_admin)])
+@router.put("/{user_id}/roles", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user_roles(
     user_id: int,
     role_data: UserRoleUpdate,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Update user roles (Admin only)."""
+    """
+    Update user roles.
+    
+    **Permission Required:** USER_UPDATE
+    **Roles:** admin only
+    """
     user = await user_service.update_user_roles(user_id, role_data.role_ids)
 
-    # pastikan user aktif dan diverifikasi
+    # Pastikan user aktif dan diverifikasi
     if not user.is_verified or not user.is_active:
         update_data = UserUpdate(
             is_active=True,
@@ -205,35 +282,50 @@ async def update_user_roles(
     return user
 
 
-@router.post("/{user_id}/unlock", response_model=UserResponse, dependencies=[Depends(require_admin)])
+@router.post("/{user_id}/unlock", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def unlock_user_account(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Unlock user account (Admin only)."""
+    """
+    Unlock user account.
+    
+    **Permission Required:** USER_UPDATE
+    **Roles:** admin only
+    """
     return await user_service.unlock_user_account(user_id)
 
 
-@router.delete("/{user_id}", dependencies=[Depends(require_admin)])
+@router.delete("/{user_id}", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
 async def delete_user(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Delete user (soft delete, Admin only)."""
+    """
+    Delete user (soft delete).
+    
+    **Permission Required:** USER_DELETE
+    **Roles:** admin only
+    """
     success = await user_service.delete_user(user_id)
     return {"message": "User deleted successfully"}
 
 
-# --------------------------------------------------------------------------
-# Approval & Rejection Endpoints
-# --------------------------------------------------------------------------
+# ============================================================================
+# APPROVAL & REJECTION ENDPOINTS - Admin and Manager
+# ============================================================================
 
-@router.patch("/{user_id}/approve", response_model=UserResponse, dependencies=[Depends(require_admin)])
+@router.patch("/{user_id}/approve", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_APPROVE))])
 async def approve_user(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
-    """Approve user registration (Admin only)."""
+    """
+    Approve user registration.
+    
+    **Permission Required:** USER_APPROVE
+    **Roles:** admin, manager
+    """
     user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -249,14 +341,17 @@ async def approve_user(
     return await user_service.update_user(user_id, update_data)
 
 
-@router.patch("/{user_id}/reject", dependencies=[Depends(require_admin)])
+@router.patch("/{user_id}/reject", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
 async def reject_user(
     user_id: int,
     user_service: UserService = Depends(get_user_service)
 ):
     """
-    Reject user registration (Admin only).
+    Reject user registration.
     Deletes the user permanently if still pending.
+    
+    **Permission Required:** USER_DELETE
+    **Roles:** admin only
     """
     try:
         user = await user_service.get_user(user_id)
@@ -276,4 +371,3 @@ async def reject_user(
     except Exception as e:
         print(f"Error rejecting user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to reject user")
-

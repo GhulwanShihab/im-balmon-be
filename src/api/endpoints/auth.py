@@ -13,7 +13,8 @@ from src.schemas.user import (
     PasswordReset, PasswordResetConfirm, PasswordStrengthCheck, PasswordStrengthResponse
 )
 from src.schemas.common import StatusMessage, SuccessResponse
-from src.auth.permissions import get_current_active_user
+from src.auth.permissions import get_current_active_user, require_permission
+from src.auth.role_permissions import Permission
 from src.utils.sessions import device_session_manager
 
 router = APIRouter()
@@ -32,12 +33,21 @@ async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserServi
     return UserService(user_repo)
 
 
+# ============================================================================
+# PUBLIC ENDPOINTS - No authentication required
+# ============================================================================
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Register a new user with password validation."""
+    """
+    Register a new user with password validation.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
     return await auth_service.user_service.create_user(user_data)
 
 
@@ -47,32 +57,13 @@ async def login(
     request: Request,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Login user and return access token with session tracking."""
+    """
+    Login user and return access token with session tracking.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
     return await auth_service.login(login_data, request)
-
-
-@router.post("/change-password", response_model=SuccessResponse)
-async def change_password(
-    password_data: PasswordChange,
-    current_user: dict = Depends(get_current_active_user),
-    user_service: UserService = Depends(get_user_service)
-):
-    """Change user password with validation."""
-    await user_service.change_password(current_user["id"], password_data)
-    return SuccessResponse(
-        success=True,
-        message="Password changed successfully"
-    )
-
-
-@router.post("/check-password-strength", response_model=PasswordStrengthResponse)
-async def check_password_strength(
-    password_data: PasswordStrengthCheck,
-    user_service: UserService = Depends(get_user_service)
-):
-    """Check password strength and get feedback."""
-    result = await user_service.check_password_strength(password_data.password)
-    return PasswordStrengthResponse(**result)
 
 
 @router.post("/request-password-reset", response_model=SuccessResponse)
@@ -80,7 +71,12 @@ async def request_password_reset(
     reset_data: PasswordReset,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Request password reset token."""
+    """
+    Request password reset token.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
     result = await auth_service.request_password_reset(reset_data)
     return SuccessResponse(
         success=True,
@@ -94,7 +90,12 @@ async def confirm_password_reset(
     reset_data: PasswordResetConfirm,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Confirm password reset with token."""
+    """
+    Confirm password reset with token.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
     result = await auth_service.confirm_password_reset(reset_data)
     return SuccessResponse(
         success=True,
@@ -102,20 +103,41 @@ async def confirm_password_reset(
     )
 
 
-@router.post("/unlock-account/{user_id}", response_model=SuccessResponse)
-async def unlock_account(
-    user_id: int,
+@router.post("/check-password-strength", response_model=PasswordStrengthResponse)
+async def check_password_strength(
+    password_data: PasswordStrengthCheck,
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Check password strength and get feedback.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
+    result = await user_service.check_password_strength(password_data.password)
+    return PasswordStrengthResponse(**result)
+
+
+# ============================================================================
+# AUTHENTICATED USER ENDPOINTS - All authenticated users
+# ============================================================================
+
+@router.post("/change-password", response_model=SuccessResponse)
+async def change_password(
+    password_data: PasswordChange,
     current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
-    """Unlock user account (admin only)."""
-    # Check if current user has admin role (implement role check)
-    # For now, allow any authenticated user to unlock (should be restricted to admin)
+    """
+    Change user password with validation.
     
-    await user_service.unlock_user_account(user_id)
+    **Permission Required:** Authenticated user
+    **Roles:** admin, manager, user
+    """
+    await user_service.change_password(current_user["id"], password_data)
     return SuccessResponse(
         success=True,
-        message="Account unlocked successfully"
+        message="Password changed successfully"
     )
 
 
@@ -124,7 +146,12 @@ async def logout(
     session_id: str,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Logout from current session."""
+    """
+    Logout from current session.
+    
+    **Permission Required:** Authenticated user
+    **Roles:** admin, manager, user
+    """
     result = await auth_service.logout(session_id)
     return SuccessResponse(
         success=True,
@@ -137,7 +164,12 @@ async def logout_all_devices(
     current_user: dict = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Logout from all devices."""
+    """
+    Logout from all devices.
+    
+    **Permission Required:** Authenticated user
+    **Roles:** admin, manager, user
+    """
     result = await auth_service.logout_all_devices(current_user["id"])
     return SuccessResponse(
         success=True,
@@ -152,7 +184,12 @@ async def revoke_session(
     current_user: dict = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Revoke a specific session."""
+    """
+    Revoke a specific session.
+    
+    **Permission Required:** Authenticated user
+    **Roles:** admin, manager, user
+    """
     result = await auth_service.revoke_session(session_id)
     return SuccessResponse(
         success=True,
@@ -164,10 +201,37 @@ async def revoke_session(
 async def get_user_sessions(
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get all active sessions for current user."""
+    """
+    Get all active sessions for current user.
+    
+    **Permission Required:** Authenticated user
+    **Roles:** admin, manager, user
+    """
     sessions = await device_session_manager.get_user_session_details(current_user["id"])
     return SuccessResponse(
         success=True,
         message="Sessions retrieved successfully",
         data={"sessions": sessions}
+    )
+
+
+# ============================================================================
+# ADMIN ENDPOINTS - Admin only
+# ============================================================================
+
+@router.post("/unlock-account/{user_id}", response_model=SuccessResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
+async def unlock_account(
+    user_id: int,
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Unlock user account.
+    
+    **Permission Required:** USER_UPDATE
+    **Roles:** admin only
+    """
+    await user_service.unlock_user_account(user_id)
+    return SuccessResponse(
+        success=True,
+        message="Account unlocked successfully"
     )

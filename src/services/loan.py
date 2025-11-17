@@ -218,17 +218,21 @@ class LoanService:
         loan = await self.loan_repo.get_by_id(loan_id)
         if not loan:
             raise HTTPException(status_code=404, detail="Loan not found")
-
-        if loan.status != LoanStatus.ACTIVE:
-            raise HTTPException(status_code=400, detail="Only active loans can be returned")
-
+    
+        # ✅ PERBAIKAN: Allow return untuk ACTIVE dan OVERDUE
+        if loan.status not in [LoanStatus.ACTIVE, LoanStatus.OVERDUE]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot return loan with status {loan.status}. Only ACTIVE or OVERDUE loans can be returned."
+            )
+    
         # Validate return items
         loan_item_ids = {item.id for item in loan.loan_items}
         return_item_ids = {item.id for item in return_data.loan_items}
-
+    
         if not return_item_ids:
             raise HTTPException(status_code=400, detail="No loan items provided for return")
-
+    
         if loan_item_ids != return_item_ids:
             missing = loan_item_ids - return_item_ids
             extra = return_item_ids - loan_item_ids
@@ -236,7 +240,7 @@ class LoanService:
                 status_code=400,
                 detail=f"Returned items do not match loan items. Missing: {missing or '-'}, Extra: {extra or '-'}"
             )
-
+    
         item_conditions = [
             {
                 "id": item.id,
@@ -245,20 +249,20 @@ class LoanService:
             }
             for item in return_data.loan_items
         ]
-
+    
         returned_loan = await self.loan_repo.return_loan(
             loan_id,
             return_notes=return_data.return_notes,
             item_conditions=item_conditions,
             returned_by=returned_by
         )
-
+    
         if not returned_loan:
             raise HTTPException(status_code=400, detail="Failed to process loan return")
-
-        # ✅ CREATE CONDITION CHANGE REQUEST
+    
+        # CREATE CONDITION CHANGE REQUEST
         session: AsyncSession = self.loan_repo.session
-
+    
         for item_data in return_data.loan_items:
             for loan_item in loan.loan_items:
                 if loan_item.id != item_data.id:
@@ -286,12 +290,12 @@ class LoanService:
                             reason=item_data.condition_notes or "Perubahan kondisi saat pengembalian",
                             status=ConditionChangeStatus.PENDING,
                         )
-
+    
                     session.add(change_req)
-
+    
         await session.commit()
-
-        # ✅ eager load sebelum serialize
+    
+        # eager load sebelum serialize
         result = await session.execute(
             select(DeviceLoan)
             .where(DeviceLoan.id == loan_id)
@@ -305,7 +309,7 @@ class LoanService:
             )
         )
         full_loan = result.scalar_one()
-
+    
         return DeviceLoanResponse.model_validate(full_loan)
 
     async def approve_condition_change(self, request_id: int, admin_id: int):

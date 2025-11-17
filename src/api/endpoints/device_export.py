@@ -1,5 +1,5 @@
 """
-Device Export Endpoints - FIXED for dict user
+Device Export Endpoints with permission-based authorization.
 """
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
@@ -11,7 +11,8 @@ import traceback
 
 from src.core.database import get_db
 from src.services.device_export_service import DeviceExportService
-from src.auth.permissions import get_current_user, require_roles
+from src.auth.permissions import get_current_active_user, require_permission
+from src.auth.role_permissions import Permission
 from src.models.user import User
 
 # Setup logger
@@ -20,18 +21,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/excel")
+# ============================================================================
+# DEVICE EXPORT - Admin and Manager
+# ============================================================================
+
+@router.get("/excel", dependencies=[Depends(require_permission(Permission.EXPORT_DEVICE_USAGE))])
 async def export_devices_to_excel(
     year: Optional[int] = Query(None, description="Filter by specific year"),
     month: Optional[int] = Query(None, ge=1, le=12, description="Filter by specific month (1-12)"),
     device_ids: Optional[str] = Query(None, description="Comma-separated device IDs to filter"),
-    current_user: Union[User, Dict[str, Any]] = Depends(get_current_user),  # ← Support both
+    current_user: Union[User, Dict[str, Any]] = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Export device usage statistics to Excel.
+    
+    **Permission Required:** EXPORT_DEVICE_USAGE
+    **Roles:** admin, manager
+    
+    **Query Parameters:**
+    - **year**: Filter by specific year (optional)
+    - **month**: Filter by specific month (1-12, requires year) (optional)
+    - **device_ids**: Comma-separated device IDs to filter (optional)
+    
+    **Response:**
+    - Excel file (.xlsx) with device usage statistics
     """
-    # ✅ Handle both User object and dict
+    # Handle both User object and dict
     username = current_user.username if hasattr(current_user, 'username') else current_user.get('username', 'Unknown')
     
     logger.info(f"📥 Export request from user: {username}")
@@ -118,18 +134,33 @@ async def export_devices_to_excel(
         )
 
 
-@router.get("/excel/admin")
+# ============================================================================
+# ADMIN-ONLY EXPORT - Admin Only
+# ============================================================================
+
+@router.get("/excel/admin", dependencies=[Depends(require_permission(Permission.EXPORT_EXCEL))])
 async def export_devices_to_excel_admin(
     year: Optional[int] = Query(None, description="Filter by specific year"),
     month: Optional[int] = Query(None, ge=1, le=12, description="Filter by specific month (1-12)"),
     device_ids: Optional[str] = Query(None, description="Comma-separated device IDs to filter"),
-    current_user: Union[User, Dict[str, Any]] = Depends(require_roles(["admin"])),  # ← Support both
+    current_user: Union[User, Dict[str, Any]] = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Export device usage statistics to Excel (Admin only).
+    
+    **Permission Required:** EXPORT_EXCEL
+    **Roles:** admin only
+    
+    **Query Parameters:**
+    - **year**: Filter by specific year (optional)
+    - **month**: Filter by specific month (1-12, requires year) (optional)
+    - **device_ids**: Comma-separated device IDs to filter (optional)
+    
+    **Response:**
+    - Excel file (.xlsx) with device usage statistics (admin version with additional data)
     """
-    # ✅ Handle both User object and dict
+    # Handle both User object and dict
     username = current_user.username if hasattr(current_user, 'username') else current_user.get('username', 'Unknown')
     
     logger.info(f"📥 Admin export request from user: {username}")

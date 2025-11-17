@@ -34,10 +34,18 @@ async def lifespan(app: FastAPI):
     await init_redis()
     logger.info("✅ Redis initialized")
     
+    # ✅ START SCHEDULER
+    loan_scheduler.start()
+    logger.info("✅ Loan scheduler started")
+    
     yield
     
     # Shutdown
     logger.info("🛑 Shutting down FastAPI application...")
+    
+    # ✅ STOP SCHEDULER
+    loan_scheduler.shutdown()
+    logger.info("✅ Loan scheduler stopped")
     
     # Close Redis connection
     await close_redis()
@@ -73,7 +81,7 @@ def create_application() -> FastAPI:
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
-    # ✅ Mount static folder (for serving uploaded files)
+    # Mount static folder (for serving uploaded files)
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     @app.get("/")
