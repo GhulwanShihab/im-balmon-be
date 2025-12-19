@@ -333,12 +333,29 @@ async def approve_user(
     if user.is_active and user.is_verified:
         raise HTTPException(status_code=400, detail="User already approved")
 
+    # ✅ STEP 1: Update status user
     update_data = UserUpdate(
         is_active=True,
         is_verified=True,
         updated_at=datetime.utcnow()
     )
-    return await user_service.update_user(user_id, update_data)
+    updated_user = await user_service.update_user(user_id, update_data)
+    
+    # ✅ STEP 2: Assign default role "user" jika belum punya role
+    user_with_roles = await user_service.get_user_with_roles(user_id)
+    if not user_with_roles.roles or len(user_with_roles.roles) == 0:
+        # Dapatkan role_id untuk "user"
+        default_role = await user_service.get_role_by_name("user")
+        if default_role:
+            await user_service.update_user_roles(user_id, [default_role.id])
+        else:
+            # Jika role "user" tidak ada, buat error
+            raise HTTPException(
+                status_code=500, 
+                detail="Default role 'user' not found. Please contact administrator."
+            )
+    
+    return await user_service.get_user(user_id)
 
 
 @router.patch("/{user_id}/reject", dependencies=[Depends(require_permission(Permission.USER_DELETE))])

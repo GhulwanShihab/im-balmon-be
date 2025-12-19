@@ -203,6 +203,10 @@ class UserService:
             roles=role_responses
         )
     
+    async def get_role_by_name(self, role_name: str):
+        """Get role by name."""
+        return await self.user_repo.get_role_by_name(role_name)
+
     async def update_user_roles(self, user_id: int, role_ids: list) -> UserResponse:
         """Update user roles."""
         user = await self.user_repo.get_by_id(user_id)

@@ -409,6 +409,15 @@ class UserRepository:
         result = await self.session.execute(query)
         return result.scalars().all()
     
+    async def get_role_by_name(self, role_name: str):
+        """Get role by name."""
+        from sqlmodel import select
+        from src.models.user import Role
+        
+        statement = select(Role).where(Role.name == role_name)
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
+
     async def hard_delete(self, user):
         """Physically remove user from the database."""
         await self.session.delete(user)

@@ -33,20 +33,54 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
 
     # JWT Settings
+    # ============================================
+    # 🔐 TOKEN EXPIRATION CONFIGURATION
+    # ============================================
+    # Access Token: Short-lived token for API requests
+    # - Too short: User needs to refresh frequently (poor UX)
+    # - Too long: Security risk if token is compromised
+    # Recommended: 15-60 minutes
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # ✅ 30 minutes (balanced)
+    
+    # Refresh Token: Long-lived token to get new access tokens
+    # - Too short: User needs to login frequently (poor UX)
+    # - Too long: Higher security risk
+    # Recommended: 7-90 days depending on security requirements
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # ✅ 30 days (balanced)
+    
+    # JWT Secret Keys
+    # CRITICAL: Use strong, unique keys for each environment
+    # Generate with: openssl rand -hex 32
     JWT_SECRET_KEY: str
-    JWT_REFRESH_SECRET_KEY: str  # 🔥 NEW: Separate key untuk refresh token
+    JWT_REFRESH_SECRET_KEY: str  # Separate key for refresh tokens (more secure)
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    
+    # ============================================
+    # 📋 TOKEN DURATION GUIDELINES
+    # ============================================
+    # 
+    # Scenario 1: High Security (Banking, Healthcare)
+    # - ACCESS_TOKEN_EXPIRE_MINUTES: 15
+    # - REFRESH_TOKEN_EXPIRE_DAYS: 7
+    #
+    # Scenario 2: Balanced (Web/Mobile Apps) ✅ CURRENT
+    # - ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    # - REFRESH_TOKEN_EXPIRE_DAYS: 30
+    #
+    # Scenario 3: User Convenience (Internal Tools)
+    # - ACCESS_TOKEN_EXPIRE_MINUTES: 60
+    # - REFRESH_TOKEN_EXPIRE_DAYS: 90
+    #
+    # ============================================
 
     # Admin Seeder
     ADMIN_USERNAME: str = "admin"
     ADMIN_EMAIL: str = "admin@example.com"
     ADMIN_PASSWORD: str = "admin123"
 
-    # Redis (optional) - 🔥 UPDATED: Make required for token blacklist
-    REDIS_HOST: str = "localhost"  # Changed from Optional
-    REDIS_PORT: int = 6379  # Changed from Optional
+    # Redis - Required for token blacklist and session management
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_DB: int = 0
     REDIS_TTL: int = 3600
@@ -61,7 +95,7 @@ class Settings(BaseSettings):
     LOG_BACKUP_COUNT: int = 5
     SERVICE_NAME: str
 
-    # Password Security Settings (Step 1)
+    # Password Security Settings
     PASSWORD_MIN_LENGTH: int = 12
     PASSWORD_MAX_LENGTH: int = 128
     PASSWORD_HISTORY_COUNT: int = 5
@@ -69,7 +103,7 @@ class Settings(BaseSettings):
     ACCOUNT_LOCKOUT_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 15
     
-    # Rate Limiting Settings (Step 2)
+    # Rate Limiting Settings
     RATE_LIMIT_CALLS: int = 100
     RATE_LIMIT_PERIOD: int = 60
     AUTH_RATE_LIMIT_CALLS: int = 5
