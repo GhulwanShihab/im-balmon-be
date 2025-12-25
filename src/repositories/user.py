@@ -3,6 +3,7 @@
 from typing import List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_, update, delete
+from sqlalchemy.orm import selectinload
 
 from src.models.user import User, Role, UserRole, PasswordResetToken, MFABackupCode
 from src.schemas.user import UserCreate, UserUpdate
@@ -239,7 +240,9 @@ class UserRepository:
     
     async def get_all_users(self, skip: int = 0, limit: int = 10, filters: dict = None, sort_by: str = "created_at", sort_order: str = "desc") -> List[User]:
         """Get all users with pagination and filtering."""
-        query = select(User).where(User.deleted_at.is_(None))
+        query = select(User).where(User.deleted_at.is_(None)).options(
+            selectinload(User.roles).selectinload(UserRole.role)
+        )
         
         # Apply filters
         if filters:
@@ -253,6 +256,9 @@ class UserRepository:
                 query = query.where(User.is_verified == filters["is_verified"])
             if filters.get("mfa_enabled") is not None:
                 query = query.where(User.mfa_enabled == filters["mfa_enabled"])
+            # Filter by role_id
+            if filters.get("role_id") is not None:
+                query = query.join(UserRole).where(UserRole.role_id == filters["role_id"])
         
         # Apply sorting
         if hasattr(User, sort_by):
@@ -265,7 +271,7 @@ class UserRepository:
         query = query.offset(skip).limit(limit)
         
         result = await self.session.execute(query)
-        return result.scalars().all()
+        return result.scalars().unique().all()
     
     async def count_users(self, filters: dict = None) -> int:
         """Count total users with filters."""
@@ -284,6 +290,9 @@ class UserRepository:
                 query = query.where(User.is_verified == filters["is_verified"])
             if filters.get("mfa_enabled") is not None:
                 query = query.where(User.mfa_enabled == filters["mfa_enabled"])
+            # Filter by role_id
+            if filters.get("role_id") is not None:
+                query = query.join(UserRole).where(UserRole.role_id == filters["role_id"])
         
         result = await self.session.execute(query)
         return result.scalar()

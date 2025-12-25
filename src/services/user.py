@@ -144,12 +144,28 @@ class UserService:
         users = await self.user_repo.get_all_users(skip, limit, filters, sort_by, sort_order)
         total = await self.user_repo.count_users(filters)
         
-        user_responses = [UserResponse.model_validate(user) for user in users]
+        from src.schemas.user import UserResponseWithRoles, UserListResponse
+        
+        # Build response with role_names for each user
+        user_responses = []
+        for user in users:
+            # Extract role names from eager loaded roles
+            role_names = []
+            if user.roles:
+                for user_role in user.roles:
+                    if user_role.role:
+                        role_names.append(user_role.role.name)
+            
+            user_data = UserResponse.model_validate(user)
+            user_with_roles = UserResponseWithRoles(
+                **user_data.model_dump(),
+                role_names=role_names
+            )
+            user_responses.append(user_with_roles)
         
         total_pages = (total + limit - 1) // limit
         page = (skip // limit) + 1
         
-        from src.schemas.user import UserListResponse
         return UserListResponse(
             users=user_responses,
             total=total,

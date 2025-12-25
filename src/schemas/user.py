@@ -51,6 +51,11 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserResponseWithRoles(UserResponse):
+    """Schema for user response with role names for list display."""
+    role_names: List[str] = []
+
+
 class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr
@@ -128,7 +133,7 @@ class TokenData(BaseModel):
 
 class UserListResponse(BaseModel):
     """Schema for user list response with pagination."""
-    users: List[UserResponse]
+    users: List["UserResponseWithRoles"]
     total: int
     page: int
     page_size: int

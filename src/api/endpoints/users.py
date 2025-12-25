@@ -91,6 +91,7 @@ async def get_users(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     is_verified: Optional[bool] = Query(None, description="Filter by verified status"),
     mfa_enabled: Optional[bool] = Query(None, description="Filter by MFA status"),
+    role_id: Optional[int] = Query(None, description="Filter by role ID"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     sort_by: str = Query("created_at", description="Field to sort by"),
@@ -114,6 +115,8 @@ async def get_users(
         filters["is_verified"] = is_verified
     if mfa_enabled is not None:
         filters["mfa_enabled"] = mfa_enabled
+    if role_id is not None:
+        filters["role_id"] = role_id
     
     skip = (page - 1) * page_size
     return await user_service.get_all_users(skip, page_size, filters, sort_by, sort_order)
