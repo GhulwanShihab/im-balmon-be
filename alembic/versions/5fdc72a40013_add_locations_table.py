@@ -19,20 +19,67 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Drop old data and columns, add new schema
-    op.execute("DELETE FROM locations")
-    op.drop_index('ix_locations_station_name', table_name='locations')
-    op.drop_column('locations', 'room_name')
-    op.drop_column('locations', 'station_name')
-    op.add_column('locations', sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False))
-    op.add_column('locations', sa.Column('type', sqlmodel.sql.sqltypes.AutoString(), nullable=False))
-    op.create_index(op.f('ix_locations_name'), 'locations', ['name'], unique=False)
+    # Check if table exists
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    tables = inspector.get_table_names()
+    
+    if 'locations' in tables:
+        # If table exists, existing logic: clean up and migrate columns
+        op.execute("DELETE FROM locations")
+        
+        # Check constraints/indexes before dropping
+        indexes = [i['name'] for i in inspector.get_indexes('locations')]
+        if 'ix_locations_station_name' in indexes:
+            op.drop_index('ix_locations_station_name', table_name='locations')
+            
+        columns = [c['name'] for c in inspector.get_columns('locations')]
+        if 'room_name' in columns:
+            op.drop_column('locations', 'room_name')
+        if 'station_name' in columns:
+            op.drop_column('locations', 'station_name')
+            
+        if 'name' not in columns:
+            op.add_column('locations', sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False))
+        if 'type' not in columns:
+            op.add_column('locations', sa.Column('type', sqlmodel.sql.sqltypes.AutoString(), nullable=False))
+            
+        if 'ix_locations_name' not in indexes:
+            op.create_index(op.f('ix_locations_name'), 'locations', ['name'], unique=False)
+            
+    else:
+        # If table doesn't exist, create it from scratch
+        op.create_table('locations',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_locations_name'), 'locations', ['name'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_locations_name'), table_name='locations')
-    op.drop_column('locations', 'type')
-    op.drop_column('locations', 'name')
-    op.add_column('locations', sa.Column('station_name', sa.VARCHAR(), nullable=False))
-    op.add_column('locations', sa.Column('room_name', sa.VARCHAR(), nullable=False))
-    op.create_index('ix_locations_station_name', 'locations', ['station_name'], unique=False)
+    # Downgrade logic - best effort
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    tables = inspector.get_table_names()
+    
+    if 'locations' in tables:
+        columns = [c['name'] for c in inspector.get_columns('locations')]
+        indexes = [i['name'] for i in inspector.get_indexes('locations')]
+        
+        if 'ix_locations_name' in indexes:
+            op.drop_index(op.f('ix_locations_name'), table_name='locations')
+            
+        if 'type' in columns:
+            op.drop_column('locations', 'type')
+        if 'name' in columns:
+            op.drop_column('locations', 'name')
+            
+        if 'station_name' not in columns:
+            op.add_column('locations', sa.Column('station_name', sa.VARCHAR(), nullable=True)) # Nullable first to avoid errors
+        if 'room_name' not in columns:
+            op.add_column('locations', sa.Column('room_name', sa.VARCHAR(), nullable=True))
+            
+        if 'ix_locations_station_name' not in indexes:
+            op.create_index('ix_locations_station_name', 'locations', ['station_name'], unique=False)
