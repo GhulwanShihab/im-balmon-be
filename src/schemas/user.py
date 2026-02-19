@@ -7,9 +7,11 @@ from datetime import datetime
 
 class UserBase(BaseModel):
     """Base user schema."""
-    username: str
+    nama: str = Field(..., max_length=255, description="Nama lengkap")
     email: EmailStr
     is_active: bool = True
+    nip: Optional[str] = Field(None, max_length=50, description="NIP (opsional)")
+    jabatan: Optional[str] = Field(None, max_length=255, description="Jabatan (opsional)")
     
 
 class UserCreate(UserBase):
@@ -30,10 +32,12 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
-    username: Optional[str] = None
+    nama: Optional[str] = Field(None, max_length=255)
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
+    nip: Optional[str] = Field(None, max_length=50)
+    jabatan: Optional[str] = Field(None, max_length=255)
     updated_at: Optional[datetime] = None
     rejected_at: Optional[datetime] = None  # opsional, untuk penolakan user
 
@@ -142,7 +146,7 @@ class UserListResponse(BaseModel):
 
 class UserSearchFilter(BaseModel):
     email: Optional[str] = None
-    username: Optional[str] = None
+    nama: Optional[str] = None
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
     mfa_enabled: Optional[bool] = None

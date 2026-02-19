@@ -32,11 +32,13 @@ class UserRepository:
     async def create(self, user_data: UserCreate, hashed_password: str) -> User:
         """Create a new user (requires admin approval)."""
         user = User(
-            username=user_data.username,
+            nama=user_data.nama,
             email=user_data.email,
             hashed_password=hashed_password,
             is_active=False,         
-            is_verified=False,       
+            is_verified=False,
+            nip=user_data.nip,
+            jabatan=user_data.jabatan,
             password_changed_at=datetime.utcnow(),
             password_history=[hashed_password],
         )
@@ -248,8 +250,8 @@ class UserRepository:
         if filters:
             if filters.get("email"):
                 query = query.where(User.email.ilike(f"%{filters['email']}%"))
-            if filters.get("username"):
-                query = query.where(User.username.ilike(f"%{filters['username']}%"))
+            if filters.get("nama"):
+                query = query.where(User.nama.ilike(f"%{filters['nama']}%"))
             if filters.get("is_active") is not None:
                 query = query.where(User.is_active == filters["is_active"])
             if filters.get("is_verified") is not None:
@@ -282,8 +284,8 @@ class UserRepository:
         if filters:
             if filters.get("email"):
                 query = query.where(User.email.ilike(f"%{filters['email']}%"))
-            if filters.get("username"):
-                query = query.where(User.username.ilike(f"%{filters['username']}%"))
+            if filters.get("nama"):
+                query = query.where(User.nama.ilike(f"%{filters['nama']}%"))
             if filters.get("is_active") is not None:
                 query = query.where(User.is_active == filters["is_active"])
             if filters.get("is_verified") is not None:

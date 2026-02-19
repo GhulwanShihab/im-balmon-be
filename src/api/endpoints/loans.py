@@ -2,7 +2,7 @@
 import os
 from typing import Optional, List
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -218,6 +218,7 @@ async def list_condition_change_requests(
             old_condition=req.old_condition,
             new_condition=req.new_condition,
             reason=req.reason,
+            evidence_photo_url=req.evidence_photo_url,
             status=req.status,
             requested_at=req.requested_at,
             reviewed_at=req.reviewed_at,
@@ -227,8 +228,8 @@ async def list_condition_change_requests(
                 else req.device.device_name if req.device
                 else None
             ),
-            requested_by_name=req.requested_by.username if req.requested_by else None,
-            reviewed_by_name=req.reviewed_by.username if req.reviewed_by else None,
+            requested_by_name=req.requested_by.nama if req.requested_by else None,
+            reviewed_by_name=req.reviewed_by.nama if req.reviewed_by else None,
         )
         for req in requests
     ]
@@ -580,7 +581,7 @@ async def approve_condition_change(
 @router.post("/condition-change/{request_id}/reject", dependencies=[Depends(require_permission(Permission.LOAN_CONDITION_APPROVE))])
 async def reject_condition_change(
     request_id: int,
-    reason: str = Query(..., description="Reason for rejection"),
+    reason: Optional[str] = Query(None, description="Reason for rejection"),
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service),
 ):
@@ -591,6 +592,63 @@ async def reject_condition_change(
     **Roles:** admin, manager
     """
     return await loan_service.reject_condition_change(request_id, reason, current_user["id"])
+
+
+@router.post("/condition-change/{request_id}/upload-evidence")
+async def upload_condition_evidence(
+    request_id: int,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Upload foto bukti pergantian kondisi perangkat.
+    
+    **Roles:** admin, user (pemilik request)
+    """
+    # Get the condition change request
+    result = await session.execute(
+        select(DeviceConditionChangeRequest)
+        .where(DeviceConditionChangeRequest.id == request_id)
+    )
+    change_req = result.scalar_one_or_none()
+    if not change_req:
+        raise HTTPException(status_code=404, detail="Condition change request not found")
+    
+    # Check permission: owner or admin
+    user_roles = current_user.get("roles", [])
+    if "admin" not in user_roles and change_req.requested_by_user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Validate file type
+    allowed_exts = [".jpg", ".jpeg", ".png", ".webp"]
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, and WEBP formats are allowed")
+    
+    # Create upload directory
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    upload_dir = os.path.join(BASE_DIR, "static", "uploads", "condition_evidence")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Save file with unique name
+    filename = f"evidence_{request_id}_{int(datetime.utcnow().timestamp())}{file_ext}"
+    file_path = os.path.join(upload_dir, filename)
+    
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Update database
+    rel_path = f"/static/uploads/condition_evidence/{filename}"
+    change_req.evidence_photo_url = rel_path
+    session.add(change_req)
+    await session.commit()
+    
+    return {
+        "message": "Evidence photo uploaded successfully",
+        "evidence_photo_url": rel_path
+    }
 
 
 # ============================================================================

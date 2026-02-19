@@ -17,11 +17,16 @@ class User(BaseModel, SQLModel, table=True):
     __tablename__ = "users"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(unique=True, index=True, nullable=False)
+    nama: str = Field(index=True, max_length=255, nullable=False)  # Replaced username
     email: str = Field(unique=True, index=True, nullable=False)
     hashed_password: str
     is_active: bool = Field(default=False)
     is_verified: bool = Field(default=False)
+    
+    # Registration fields for employee sync
+    nip: Optional[str] = Field(default=None, max_length=50, nullable=True)
+    jabatan: Optional[str] = Field(default=None, max_length=255, nullable=True)
+
     
     # Password security fields (Step 1)
     password_changed_at: Optional[datetime] = Field(default_factory=datetime.utcnow)

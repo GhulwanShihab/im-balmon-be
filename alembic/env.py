@@ -17,7 +17,7 @@ from sqlmodel import SQLModel
 # Import all models so they are registered with SQLModel
 from src.models.user import User
 from src.models.perangkat import Device
-from src.models.loan import DeviceLoan, DeviceLoanItem, LoanHistory
+from src.models.loan import DeviceLoan, DeviceLoanItem, LoanHistory, DeviceConditionChangeRequest
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

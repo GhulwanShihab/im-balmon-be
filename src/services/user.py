@@ -270,11 +270,14 @@ class UserService:
         from src.schemas.user import RoleResponse
         return [RoleResponse.model_validate(role) for role in roles]
 
-    async def get_by_username(self, username: str) -> Optional[User]:
+    async def get_by_nama(self, nama: str) -> Optional[User]:
+        """Get user by nama."""
+        from sqlmodel import select
+        from sqlalchemy import and_
         query = select(User).where(
-            and_(User.username == username, User.deleted_at.is_(None))
+            and_(User.nama == nama, User.deleted_at.is_(None))
         )
-        result = await self.session.execute(query)
+        result = await self.user_repo.session.execute(query)
         return result.scalar_one_or_none()
     
     async def reject_user(self, user_id: int):

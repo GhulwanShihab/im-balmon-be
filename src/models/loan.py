@@ -4,7 +4,6 @@ from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
 from sqlmodel import Field, SQLModel, Relationship, Column, ForeignKey
-from sqlalchemy import Enum as SQLEnum
 
 from .base import BaseModel
 
@@ -26,8 +25,8 @@ class LoanStatus(str, Enum):
 class DeviceCondition(str, Enum):
     """Device condition enumeration."""
     BAIK = "BAIK"
-    RUSAK_RINGAN = "RUSAK_RINGAN"
-    RUSAK_BERAT = "RUSAK_BERAT"
+    RUSAK = "RUSAK"
+    MAINTENANCE = "MAINTENANCE"
 
 
 class ConditionChangeStatus(str, Enum):
@@ -78,7 +77,7 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
     loan_end_date: date = Field(description="Tanggal akhir peminjaman (calculated)")
 
     # Status and dates
-    status: LoanStatus = Field(default=LoanStatus.ACTIVE, sa_column=Column(SQLEnum(LoanStatus)))
+    status: str = Field(default=LoanStatus.ACTIVE, max_length=20)
     actual_return_date: Optional[date] = Field(None, description="Tanggal pengembalian aktual")
 
     # Return information
@@ -124,13 +123,13 @@ class DeviceLoanItem(BaseModel, SQLModel, table=True):
 
     quantity: int = Field(default=1, ge=1, description="Jumlah yang dipinjam")
 
-    condition_before: DeviceCondition = Field(
+    condition_before: str = Field(
         default=DeviceCondition.BAIK,
-        sa_column=Column(SQLEnum(DeviceCondition)),
+        max_length=50,
     )
-    condition_after: Optional[DeviceCondition] = Field(
+    condition_after: Optional[str] = Field(
         None,
-        sa_column=Column(SQLEnum(DeviceCondition)),
+        max_length=50,
     )
 
     # ✅ STRING ANNOTATIONS
@@ -157,8 +156,8 @@ class LoanHistory(BaseModel, SQLModel, table=True):
     loan_id: int = Field(foreign_key="device_loans.id", description="ID peminjaman")
     
     # Status change information
-    old_status: Optional[LoanStatus] = Field(None, sa_column=Column(SQLEnum(LoanStatus)))
-    new_status: LoanStatus = Field(sa_column=Column(SQLEnum(LoanStatus)))
+    old_status: Optional[str] = Field(None, max_length=20)
+    new_status: str = Field(max_length=20)
     
     change_reason: Optional[str] = Field(None, description="Alasan perubahan status")
     
@@ -188,11 +187,12 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     child_device_id: Optional[int] = Field(foreign_key="device_children.id", default=None)
     requested_by_user_id: int = Field(foreign_key="users.id", description="User yang meminta perubahan")
 
-    old_condition: DeviceCondition = Field(sa_column=Column(SQLEnum(DeviceCondition)))
-    new_condition: DeviceCondition = Field(sa_column=Column(SQLEnum(DeviceCondition)))
+    old_condition: str = Field(max_length=50)
+    new_condition: str = Field(max_length=50)
 
     reason: Optional[str] = Field(None, description="Alasan perubahan kondisi")
-    status: ConditionChangeStatus = Field(default=ConditionChangeStatus.PENDING, sa_column=Column(SQLEnum(ConditionChangeStatus)))
+    evidence_photo_url: Optional[str] = Field(None, description="URL foto bukti pergantian kondisi")
+    status: str = Field(default=ConditionChangeStatus.PENDING, max_length=20)
 
     requested_at: datetime = Field(default_factory=datetime.utcnow)
     reviewed_at: Optional[datetime] = None

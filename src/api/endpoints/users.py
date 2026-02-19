@@ -87,7 +87,7 @@ async def update_current_user(
 @router.get("/", response_model=UserListResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_users(
     email: Optional[str] = Query(None, description="Filter by email"),
-    username: Optional[str] = Query(None, description="Filter by username"),
+    nama: Optional[str] = Query(None, description="Filter by nama"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     is_verified: Optional[bool] = Query(None, description="Filter by verified status"),
     mfa_enabled: Optional[bool] = Query(None, description="Filter by MFA status"),
@@ -107,8 +107,8 @@ async def get_users(
     filters = {}
     if email:
         filters["email"] = email
-    if username:
-        filters["username"] = username
+    if nama:
+        filters["nama"] = nama
     if is_active is not None:
         filters["is_active"] = is_active
     if is_verified is not None:
@@ -357,6 +357,19 @@ async def approve_user(
                 status_code=500, 
                 detail="Default role 'user' not found. Please contact administrator."
             )
+    
+    # ✅ STEP 3: Create Employee record from user data
+    from src.repositories.employee import EmployeeRepository
+    from src.models.employee import Employee
+    
+    employee_repo = EmployeeRepository(user_service.user_repo.session)
+    employee = Employee(
+        nama=user.nama,
+        nip=user.nip,
+        jabatan=user.jabatan or "Pegawai",  # Default jika tidak diisi
+        user_id=user_id
+    )
+    await employee_repo.create(employee)
     
     return await user_service.get_user(user_id)
 

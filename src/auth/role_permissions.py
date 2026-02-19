@@ -67,6 +67,14 @@ class Permission(str, Enum):
     EMPLOYEE_DELETE = "employee:delete"
     
     # ========================================================================
+    # LOCATION PERMISSIONS
+    # ========================================================================
+    LOCATION_VIEW = "location:view"
+    LOCATION_CREATE = "location:create"
+    LOCATION_UPDATE = "location:update"
+    LOCATION_DELETE = "location:delete"
+    
+    # ========================================================================
     # EXPORT PERMISSIONS
     # ========================================================================
     EXPORT_PDF = "export:pdf"
@@ -138,6 +146,12 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.EMPLOYEE_UPDATE,
         Permission.EMPLOYEE_DELETE,
         
+        # Locations
+        Permission.LOCATION_VIEW,
+        Permission.LOCATION_CREATE,
+        Permission.LOCATION_UPDATE,
+        Permission.LOCATION_DELETE,
+        
         # Export
         Permission.EXPORT_PDF,
         Permission.EXPORT_EXCEL,
@@ -181,6 +195,9 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         # Employees - View only
         Permission.EMPLOYEE_VIEW,
         
+        # Locations - View only
+        Permission.LOCATION_VIEW,
+        
         # Export - Can export reports
         Permission.EXPORT_PDF,
         Permission.EXPORT_EXCEL,
@@ -219,6 +236,9 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         
         # Employees - View only
         Permission.EMPLOYEE_VIEW,
+        
+        # Locations - View only
+        Permission.LOCATION_VIEW,
         
         # Export - Can export own data
         Permission.EXPORT_PDF,  # Export own loan documents

@@ -11,8 +11,10 @@ class Employee(BaseModel, SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     nama: str = Field(index=True, max_length=255)
-    nip: str = Field(index=True, max_length=50, unique=True)
-    jabatan: str = Field(max_length=255)
+    nip: Optional[str] = Field(default=None, index=True, max_length=50, nullable=True)
+    jabatan: str = Field(max_length=255, default="Pegawai")
+    user_id: Optional[int] = Field(default=None, foreign_key="users.id", unique=True, nullable=True)
+
 
     loans_as_pihak_1: List["DeviceLoan"] = Relationship(
         back_populates="pihak_1",

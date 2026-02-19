@@ -243,6 +243,7 @@ class DeviceConditionChangeRequestResponse(BaseModel):
     old_condition: Optional[DeviceCondition] = None
     new_condition: Optional[DeviceCondition] = None
     reason: Optional[str] = None
+    evidence_photo_url: Optional[str] = None
     status: ConditionChangeStatus
 
     requested_at: Optional[datetime] = None

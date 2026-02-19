@@ -48,9 +48,9 @@ async def export_devices_to_excel(
     - Excel file (.xlsx) with device usage statistics
     """
     # Handle both User object and dict
-    username = current_user.username if hasattr(current_user, 'username') else current_user.get('username', 'Unknown')
+    nama = current_user.nama if hasattr(current_user, 'nama') else current_user.get('nama', 'Unknown')
     
-    logger.info(f"📥 Export request from user: {username}")
+    logger.info(f"📥 Export request from user: {nama}")
     logger.info(f"   Filters - year: {year}, month: {month}, device_ids: {device_ids}")
     
     try:
@@ -161,9 +161,9 @@ async def export_devices_to_excel_admin(
     - Excel file (.xlsx) with device usage statistics (admin version with additional data)
     """
     # Handle both User object and dict
-    username = current_user.username if hasattr(current_user, 'username') else current_user.get('username', 'Unknown')
+    nama = current_user.nama if hasattr(current_user, 'nama') else current_user.get('nama', 'Unknown')
     
-    logger.info(f"📥 Admin export request from user: {username}")
+    logger.info(f"📥 Admin export request from user: {nama}")
     
     try:
         # Parse device IDs if provided

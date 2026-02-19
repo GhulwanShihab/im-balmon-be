@@ -362,7 +362,8 @@ class LoanService:
         req.status = ConditionChangeStatus.REJECTED
         req.reviewed_by_admin_id = admin_id
         req.reviewed_at = datetime.utcnow()
-        req.reason = (req.reason or "") + f" | Rejected: {reason}"
+        if reason:
+            req.reason = (req.reason or "") + f" | Rejected: {reason}"
 
         await session.commit()
         await session.refresh(req)

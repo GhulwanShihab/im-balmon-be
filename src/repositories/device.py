@@ -290,27 +290,27 @@ class DeviceRepository:
 
         total_good_condition = good_devices + good_children
 
-        # Light damage (Rusak Ringan)
-        light_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.RUSAK_RINGAN)
-        light_result = await self.session.execute(light_query)
-        light_devices = light_result.scalar()
+        # Damaged condition (Rusak)
+        damaged_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.RUSAK)
+        damaged_result = await self.session.execute(damaged_query)
+        damaged_devices = damaged_result.scalar()
 
-        light_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.RUSAK_RINGAN)
-        light_child_result = await self.session.execute(light_child_query)
-        light_children = light_child_result.scalar()
+        damaged_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.RUSAK)
+        damaged_child_result = await self.session.execute(damaged_child_query)
+        damaged_children = damaged_child_result.scalar()
 
-        total_light_damage = light_devices + light_children
+        total_damaged = damaged_devices + damaged_children
 
-        # Heavy damage (Rusak Berat)
-        heavy_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.RUSAK_BERAT)
-        heavy_result = await self.session.execute(heavy_query)
-        heavy_devices = heavy_result.scalar()
+        # Maintenance condition
+        maint_cond_query = select(func.count(Device.id)).where(Device.device_condition == DeviceCondition.MAINTENANCE)
+        maint_cond_result = await self.session.execute(maint_cond_query)
+        maint_cond_devices = maint_cond_result.scalar()
 
-        heavy_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.RUSAK_BERAT)
-        heavy_child_result = await self.session.execute(heavy_child_query)
-        heavy_children = heavy_child_result.scalar()
+        maint_cond_child_query = select(func.count(DeviceChild.id)).where(DeviceChild.device_condition == DeviceCondition.MAINTENANCE)
+        maint_cond_child_result = await self.session.execute(maint_cond_child_query)
+        maint_cond_children = maint_cond_child_result.scalar()
 
-        total_heavy_damage = heavy_devices + heavy_children
+        total_maintenance_condition = maint_cond_devices + maint_cond_children
 
         # ========================================
         # 4. DEVICES BY CONDITION (Dictionary)
@@ -435,8 +435,8 @@ class DeviceRepository:
 
             # Condition counts (for frontend cards)
             "good_condition": total_good_condition,  # ✅
-            "light_damage": total_light_damage,  # ✅
-            "heavy_damage": total_heavy_damage,  # ✅
+            "damaged": total_damaged,  # ✅
+            "maintenance_condition": total_maintenance_condition,  # ✅
 
             # Dictionaries
             "devices_by_condition": devices_by_condition,

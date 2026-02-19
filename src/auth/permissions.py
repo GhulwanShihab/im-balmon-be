@@ -46,7 +46,7 @@ async def get_current_user(
     """
     Get the current authenticated user from the token.
     
-    Returns user dict with: id, email, username, roles, is_active, permissions
+    Returns user dict with: id, email, nama, roles, is_active, permissions
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,7 +86,7 @@ async def get_current_user(
         user_data = {
             "id": user.id,
             "email": user.email,
-            "username": user.username,
+            "nama": user.nama,
             "roles": roles,
             "permissions": [perm.value for perm in permissions],  # List of permission strings
             "is_active": user.is_active,

@@ -8,6 +8,7 @@ from .user import User, Role, UserRole, PasswordResetToken, MFABackupCode
 from .perangkat import Device, DeviceStatus
 from .device_child import DeviceChild
 from .employee import Employee
+from .location import Location
 
 # Models with dependencies (after all their dependencies)
 from .loan import (
@@ -41,6 +42,9 @@ __all__ = [
     
     # Employee
     "Employee",
+    
+    # Location
+    "Location",
     
     # Loan
     "DeviceLoan",
