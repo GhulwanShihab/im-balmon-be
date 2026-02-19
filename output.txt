@@ -1,0 +1,32 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.0rc1, pytest-7.4.3, pluggy-1.6.0 -- d:\ta\im-balmon\backend\venv\scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\TA\IM-Balmon\backend
+configfile: pytest.ini
+plugins: anyio-3.7.1, asyncio-0.21.1
+asyncio: mode=strict
+collecting ... collected 21 items
+
+tests/test_validators.py::TestValidateEmail::test_valid_email PASSED     [  4%]
+tests/test_validators.py::TestValidateEmail::test_invalid_email PASSED   [  9%]
+tests/test_validators.py::TestValidatePasswordStrength::test_strong_password PASSED [ 14%]
+tests/test_validators.py::TestValidatePasswordStrength::test_password_too_short PASSED [ 19%]
+tests/test_validators.py::TestValidatePasswordStrength::test_password_minimum_length PASSED [ 23%]
+tests/test_validators.py::TestValidatePasswordStrength::test_empty_password PASSED [ 28%]
+tests/test_validators.py::TestValidatePasswordStrength::test_password_strength_score PASSED [ 33%]
+tests/test_validators.py::TestSequentialChars::test_sequential_numbers PASSED [ 38%]
+tests/test_validators.py::TestSequentialChars::test_sequential_letters PASSED [ 42%]
+tests/test_validators.py::TestSequentialChars::test_qwerty_pattern PASSED [ 47%]
+tests/test_validators.py::TestSequentialChars::test_no_sequential_chars PASSED [ 52%]
+tests/test_validators.py::TestRepeatedChars::test_repeated_chars PASSED  [ 57%]
+tests/test_validators.py::TestRepeatedChars::test_no_repeated_chars PASSED [ 61%]
+tests/test_validators.py::TestCalculateStrengthScore::test_weak_password_score PASSED [ 66%]
+tests/test_validators.py::TestCalculateStrengthScore::test_medium_password_score PASSED [ 71%]
+tests/test_validators.py::TestCalculateStrengthScore::test_strong_password_score PASSED [ 76%]
+tests/test_validators.py::TestCalculateStrengthScore::test_max_score_cap PASSED [ 80%]
+tests/test_validators.py::TestSanitizeFilename::test_remove_dangerous_chars PASSED [ 85%]
+tests/test_validators.py::TestSanitizeFilename::test_normal_filename PASSED [ 90%]
+tests/test_validators.py::TestSanitizeFilename::test_max_length PASSED   [ 95%]
+tests/test_validators.py::TestSanitizeFilename::test_preserve_extension PASSED [100%]
+
+============================= 21 passed in 0.56s ==============================

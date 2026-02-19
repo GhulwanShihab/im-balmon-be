@@ -80,6 +80,10 @@ def upgrade() -> None:
             ALTER TABLE {table} 
             ALTER COLUMN {col} TYPE text USING {col}::text
         """)
+        
+        # ✅ FIX: Normalisasi data 'baik' menjadi 'BAIK' saat masih dalam format text
+        op.execute(f"UPDATE {table} SET {col} = 'BAIK' WHERE {col} = 'baik'")
+        op.execute(f"UPDATE {table} SET {col} = UPPER({col})")
 
     # Drop old enum and create clean one
     op.execute("DROP TYPE IF EXISTS devicecondition")
