@@ -1,17 +1,25 @@
 # tests/conftest.py
 """Pytest configuration and fixtures for testing."""
 
+import sys
+import os
 import pytest
 import asyncio
 from typing import AsyncGenerator, Generator
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime
 
+# Add the project root directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # Pytest asyncio configuration
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for each test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
@@ -86,4 +94,5 @@ def mock_session():
     session.refresh = AsyncMock()
     session.rollback = AsyncMock()
     session.execute = AsyncMock()
+    session.add = MagicMock()
     return session

@@ -57,9 +57,6 @@ static/uploads/
 .pytest_cache/
 htmlcov/
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
 
 # Security (Step 1 additions)
 # Don't commit any security-related files
