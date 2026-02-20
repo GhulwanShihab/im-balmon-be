@@ -10,7 +10,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.core.config import settings
-from src.models.user import User
+from src.models.user import User, Role, UserRole
 from src.models.location import Location
 from src.models.perangkat import Device
 from src.models.device_child import DeviceChild
@@ -33,6 +33,21 @@ def import_data():
     with Session(engine) as session:
         # Import Order matters due to Foreign Keys
 
+        # 0. Roles (Independent)
+        print("Importing Roles...")
+        for item in data.get("roles", []):
+            existing = session.get(Role, item["id"])
+            if not existing:
+                try:
+                    obj = Role.model_validate(item)
+                    session.add(obj)
+                    session.commit() # Commit individually
+                    print(f"Added Role {item['name']}")
+                except Exception as e:
+                    print(f"Failed to add Role {item['name']}: {e}")
+                    session.rollback()
+        print("Roles committed.")
+
         # 1. Users
         print("Importing Users...")
         for item in data.get("users", []):
@@ -42,6 +57,21 @@ def import_data():
                 session.add(obj)
         session.commit()
         print("Users committed.")
+
+        # 1.5 User Roles (Depends on User and Role)
+        print("Importing User Roles...")
+        for item in data.get("user_roles", []):
+            existing = session.get(UserRole, item["id"])
+            if not existing:
+                try:
+                    obj = UserRole.model_validate(item)
+                    session.add(obj)
+                    session.commit()
+                    print(f"Added UserRole {item['id']}")
+                except Exception as e:
+                    print(f"Failed to add UserRole {item['id']}: {e}")
+                    session.rollback()
+        print("User Roles committed.")
 
         # 2. Locations
         print("Importing Locations...")
@@ -205,7 +235,7 @@ def import_data():
         # Reset Sequences
         print("Resetting sequences...")
         tables = [
-            "users", "locations", "employees", "devices", "device_children",
+            "roles", "user_roles", "users", "locations", "employees", "devices", "device_children",
             "device_groups", "device_group_items", "device_loans", "device_loan_items",
             "loan_history", "device_condition_change_requests"
         ]

@@ -1,33 +1,6 @@
 {
   "users": [
     {
-      "email": "admin@example.com",
-      "force_password_change": false,
-      "created_by": null,
-      "hashed_password": "$2b$12$LLFgUneWrSP0ZcWuRTBZmeO6/JVltFxOjwf.XDbs3ZUK1OUsg6ZD.",
-      "failed_login_attempts": 0,
-      "deleted_at": null,
-      "is_active": true,
-      "locked_until": null,
-      "deleted_by": null,
-      "is_verified": true,
-      "lockout_duration_minutes": 0,
-      "created_at": "2025-10-31T19:07:44.733006",
-      "nip": null,
-      "last_login": "2026-02-16T17:08:11.437537",
-      "updated_at": "2026-02-16T17:08:11.437537",
-      "jabatan": null,
-      "mfa_enabled": false,
-      "id": 1,
-      "password_changed_at": "2025-10-31T19:07:44.733006",
-      "mfa_secret": null,
-      "updated_by": null,
-      "nama": "admin",
-      "password_history": []
-    },
-    {
-      "email": "padil@gmail.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$Y5ro4VnwUkudzIHA6V/7L.BmgX.WcH8ATSCckIo4bp0vkBSAmzJ9m",
       "failed_login_attempts": 0,
@@ -50,11 +23,11 @@
       "nama": "Padil",
       "password_history": [
         "$2b$12$Y5ro4VnwUkudzIHA6V/7L.BmgX.WcH8ATSCckIo4bp0vkBSAmzJ9m"
-      ]
+      ],
+      "email": "padil@gmail.com",
+      "force_password_change": false
     },
     {
-      "email": "kevin@gmail.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$e7068aMKHLWnqPPrXHBmDOjwE5FfiewyssC0qs7CHCHMvp299jkSK",
       "failed_login_attempts": 0,
@@ -77,11 +50,11 @@
       "nama": "Kevin",
       "password_history": [
         "$2b$12$e7068aMKHLWnqPPrXHBmDOjwE5FfiewyssC0qs7CHCHMvp299jkSK"
-      ]
+      ],
+      "email": "kevin@gmail.com",
+      "force_password_change": false
     },
     {
-      "email": "john@example.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$XE1GxqQ6AlC/vJ3LK2RxwuqsZO9sUvBr4vjZfBr78Tyh7wRAFBtlO",
       "failed_login_attempts": 0,
@@ -104,11 +77,11 @@
       "nama": "John",
       "password_history": [
         "$2b$12$XE1GxqQ6AlC/vJ3LK2RxwuqsZO9sUvBr4vjZfBr78Tyh7wRAFBtlO"
-      ]
+      ],
+      "email": "john@example.com",
+      "force_password_change": false
     },
     {
-      "email": "fulan@example.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$LK57eWyje6nsxKqEQSkCR.IGia/OswXgQtb8BdAgzjFQLD.GMrabW",
       "failed_login_attempts": 0,
@@ -131,11 +104,11 @@
       "nama": "Fulan",
       "password_history": [
         "$2b$12$LK57eWyje6nsxKqEQSkCR.IGia/OswXgQtb8BdAgzjFQLD.GMrabW"
-      ]
+      ],
+      "email": "fulan@example.com",
+      "force_password_change": false
     },
     {
-      "email": "user2@example.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$NItC.vIB/MyjCU5EvI5W0ORf0KHLsIU./fNVxJkLsBr9chQ.Pm0Xe",
       "failed_login_attempts": 0,
@@ -158,11 +131,11 @@
       "nama": "User 2",
       "password_history": [
         "$2b$12$NItC.vIB/MyjCU5EvI5W0ORf0KHLsIU./fNVxJkLsBr9chQ.Pm0Xe"
-      ]
+      ],
+      "email": "user2@example.com",
+      "force_password_change": false
     },
     {
-      "email": "luke@gmail.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$fd5HSORusIDlIl/FX19udOaECrwvG7fFrOknT4NogezMfopwF2/sK",
       "failed_login_attempts": 0,
@@ -185,11 +158,11 @@
       "nama": "Luke",
       "password_history": [
         "$2b$12$fd5HSORusIDlIl/FX19udOaECrwvG7fFrOknT4NogezMfopwF2/sK"
-      ]
+      ],
+      "email": "luke@gmail.com",
+      "force_password_change": false
     },
     {
-      "email": "leon@gmail.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$Jti7Ngk1y6soPihQqPznVuz0TQCxFITUuMmb4b.POc28Jn4kbGYtW",
       "failed_login_attempts": 0,
@@ -212,38 +185,11 @@
       "nama": "Leon",
       "password_history": [
         "$2b$12$Jti7Ngk1y6soPihQqPznVuz0TQCxFITUuMmb4b.POc28Jn4kbGYtW"
-      ]
+      ],
+      "email": "leon@gmail.com",
+      "force_password_change": false
     },
     {
-      "email": "user@example.com",
-      "force_password_change": false,
-      "created_by": null,
-      "hashed_password": "$2b$12$H5Fuzvoaiohs6Tt1ZAnB/e.Zi.L6Twx89ngKWYhdbzbGOlXA6mUUC",
-      "failed_login_attempts": 0,
-      "deleted_at": null,
-      "is_active": true,
-      "locked_until": null,
-      "deleted_by": null,
-      "is_verified": true,
-      "lockout_duration_minutes": 0,
-      "created_at": "2025-10-31T19:18:38.648317",
-      "nip": null,
-      "last_login": "2026-02-17T13:01:23.483797",
-      "updated_at": "2026-02-17T13:01:23.483797",
-      "jabatan": null,
-      "mfa_enabled": false,
-      "id": 2,
-      "password_changed_at": "2025-10-31T19:18:38.658833",
-      "mfa_secret": null,
-      "updated_by": null,
-      "nama": "User 1",
-      "password_history": [
-        "$2b$12$H5Fuzvoaiohs6Tt1ZAnB/e.Zi.L6Twx89ngKWYhdbzbGOlXA6mUUC"
-      ]
-    },
-    {
-      "email": "manager@example.com",
-      "force_password_change": false,
       "created_by": null,
       "hashed_password": "$2b$12$vFP6fWVvDU88zSApWoxure67RFnpWAOkGZR2KqvoP.dPF0vKaxKZS",
       "failed_login_attempts": 0,
@@ -266,88 +212,292 @@
       "nama": "Manager",
       "password_history": [
         "$2b$12$vFP6fWVvDU88zSApWoxure67RFnpWAOkGZR2KqvoP.dPF0vKaxKZS"
-      ]
+      ],
+      "email": "manager@example.com",
+      "force_password_change": false
+    },
+    {
+      "created_by": null,
+      "hashed_password": "$2b$12$H5Fuzvoaiohs6Tt1ZAnB/e.Zi.L6Twx89ngKWYhdbzbGOlXA6mUUC",
+      "failed_login_attempts": 0,
+      "deleted_at": null,
+      "is_active": true,
+      "locked_until": null,
+      "deleted_by": null,
+      "is_verified": true,
+      "lockout_duration_minutes": 0,
+      "created_at": "2025-10-31T19:18:38.648317",
+      "nip": null,
+      "last_login": "2026-02-20T03:34:55.511368",
+      "updated_at": "2026-02-20T03:34:55.511368",
+      "jabatan": null,
+      "mfa_enabled": false,
+      "id": 2,
+      "password_changed_at": "2025-10-31T19:18:38.658833",
+      "mfa_secret": null,
+      "updated_by": null,
+      "nama": "User 1",
+      "password_history": [
+        "$2b$12$H5Fuzvoaiohs6Tt1ZAnB/e.Zi.L6Twx89ngKWYhdbzbGOlXA6mUUC"
+      ],
+      "email": "user@example.com",
+      "force_password_change": false
+    },
+    {
+      "created_by": null,
+      "hashed_password": "$2b$12$LLFgUneWrSP0ZcWuRTBZmeO6/JVltFxOjwf.XDbs3ZUK1OUsg6ZD.",
+      "failed_login_attempts": 0,
+      "deleted_at": null,
+      "is_active": true,
+      "locked_until": null,
+      "deleted_by": null,
+      "is_verified": true,
+      "lockout_duration_minutes": 0,
+      "created_at": "2025-10-31T19:07:44.733006",
+      "nip": null,
+      "last_login": "2026-02-20T03:38:04.216695",
+      "updated_at": "2026-02-20T03:38:04.216695",
+      "jabatan": null,
+      "mfa_enabled": false,
+      "id": 1,
+      "password_changed_at": "2025-10-31T19:07:44.733006",
+      "mfa_secret": null,
+      "updated_by": null,
+      "nama": "admin",
+      "password_history": [],
+      "email": "admin@example.com",
+      "force_password_change": false
+    }
+  ],
+  "roles": [
+    {
+      "deleted_at": null,
+      "updated_by": null,
+      "created_at": "2025-06-15 22:16:57.406215",
+      "id": 1,
+      "description": "Administrator with full system access",
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": "2025-06-15 22:16:57.406215",
+      "name": "admin"
+    },
+    {
+      "deleted_at": null,
+      "updated_by": null,
+      "created_at": "2025-07-02 19:34:35.258535",
+      "id": 2,
+      "description": "Manager with device and user management access",
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "name": "manager"
+    },
+    {
+      "deleted_at": null,
+      "updated_by": null,
+      "created_at": "2025-07-02 19:34:35.276323",
+      "id": 3,
+      "description": "Regular user with basic access",
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "name": "user"
+    }
+  ],
+  "user_roles": [
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-10-05 08:00:35.620073",
+      "id": 3,
+      "role_id": 1,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 6
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-10-16 17:55:42.832086",
+      "id": 9,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 2
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-11-15 21:19:52.792000",
+      "id": 11,
+      "role_id": 2,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 3
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-11-22 18:24:11.060189",
+      "id": 12,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 5
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-01 17:09:01.191602",
+      "id": 13,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 7
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-10 15:47:17.476926",
+      "id": 14,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 8
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-12 03:31:28.044409",
+      "id": 15,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 9
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-12 09:38:07.862602",
+      "id": 16,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 10
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-17 19:16:43.320040",
+      "id": 17,
+      "role_id": 1,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 1
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2025-12-19 16:36:45.690891",
+      "id": 18,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 11
+    },
+    {
+      "updated_by": null,
+      "deleted_at": null,
+      "created_at": "2026-02-03 16:45:26.008929",
+      "id": 20,
+      "role_id": 3,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "user_id": 12
     }
   ],
   "locations": [
     {
-      "deleted_at": null,
-      "created_at": "2026-02-16T14:51:16.211029",
-      "updated_by": null,
-      "id": 2,
-      "type": "STASIUN",
       "deleted_by": null,
       "created_by": null,
       "updated_at": null,
       "name": "Bergerak",
-      "description": "Ini merupakan stasiun bergerak\n"
+      "description": "Ini merupakan stasiun bergerak\n",
+      "created_at": "2026-02-16T14:51:16.211029",
+      "updated_by": null,
+      "deleted_at": null,
+      "id": 2,
+      "type": "STASIUN"
     },
     {
-      "deleted_at": null,
-      "created_at": "2026-02-16T14:51:40.040199",
-      "updated_by": null,
-      "id": 3,
-      "type": "RUANGAN",
       "deleted_by": null,
       "created_by": null,
       "updated_at": null,
       "name": "Ruang Perangkat",
-      "description": "Ini merupakan ruang perangkat di lokasi A"
+      "description": "Ini merupakan ruang perangkat di lokasi A",
+      "created_at": "2026-02-16T14:51:40.040199",
+      "updated_by": null,
+      "deleted_at": null,
+      "id": 3,
+      "type": "RUANGAN"
     }
   ],
   "employees": [
     {
-      "created_by": null,
-      "deleted_by": null,
-      "updated_at": null,
-      "nama": "Pegawai A",
-      "jabatan": "Jabatan A",
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-10-31T19:10:03.220526",
       "id": 1,
       "nip": " 1111111111",
-      "user_id": null
-    },
-    {
+      "user_id": null,
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "nama": "Pegawai B",
-      "jabatan": "Jabatan B",
+      "nama": "Pegawai A",
+      "jabatan": "Jabatan A"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-10-31T19:10:22.244786",
       "id": 2,
       "nip": "2222222222",
-      "user_id": null
-    },
-    {
+      "user_id": null,
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "nama": "Leon",
-      "jabatan": "Pegawai Aktif",
+      "nama": "Pegawai B",
+      "jabatan": "Jabatan B"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-03T16:44:51.267009",
       "id": 3,
       "nip": "123456789",
-      "user_id": 12
+      "user_id": 12,
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "nama": "Leon",
+      "jabatan": "Pegawai Aktif"
     }
   ],
   "devices": [
     {
-      "device_code": "11111111",
-      "device_name": "Perangkat 1",
-      "bmn_brand": "Perangkat",
-      "device_year": 2022,
-      "device_station": "Bergerak",
-      "device_status": "TERSEDIA",
-      "device_room": "Ruang Perangkat",
-      "created_at": "2026-02-16T16:15:14.537032",
-      "id": 1,
       "nup_device": "01",
+      "id": 1,
       "sample_brand": "Perangkat",
       "device_type": "Perangkat",
       "device_condition": "BAIK",
@@ -355,19 +505,19 @@
       "photos_url": [
         "/static/uploads/devices/11111111_1771233314.png"
       ],
-      "updated_at": "2026-02-16T16:15:14.583299"
-    },
-    {
-      "device_code": "22222222",
-      "device_name": "Perangkat 2",
+      "updated_at": "2026-02-16T16:15:14.583299",
+      "device_name": "Perangkat 1",
+      "device_code": "11111111",
       "bmn_brand": "Perangkat",
-      "device_year": 2024,
+      "device_year": 2022,
       "device_station": "Bergerak",
       "device_status": "TERSEDIA",
       "device_room": "Ruang Perangkat",
-      "created_at": "2026-02-16T16:17:16.843385",
-      "id": 2,
+      "created_at": "2026-02-16T16:15:14.537032"
+    },
+    {
       "nup_device": "01",
+      "id": 2,
       "sample_brand": "Perangkat",
       "device_type": "Perangkat",
       "device_condition": "BAIK",
@@ -375,193 +525,101 @@
       "photos_url": [
         "/static/uploads/devices/22222222_1771233436.png"
       ],
-      "updated_at": "2026-02-17T13:02:28.783473"
+      "updated_at": "2026-02-17T13:02:28.783473",
+      "device_name": "Perangkat 2",
+      "device_code": "22222222",
+      "bmn_brand": "Perangkat",
+      "device_year": 2024,
+      "device_station": "Bergerak",
+      "device_status": "TERSEDIA",
+      "device_room": "Ruang Perangkat",
+      "created_at": "2026-02-16T16:17:16.843385"
     }
   ],
   "device_children": [
     {
-      "parent_id": 2,
-      "device_name": "Perangkat 2A",
-      "nup_device": "11",
-      "sample_brand": "Perangkat",
-      "device_type": "Perangkat",
-      "device_station": "Bergerak",
-      "device_status": "TERSEDIA",
-      "device_room": "Ruang Perangkat",
-      "created_at": "2026-02-16T16:32:45.287786",
       "device_code": "22222222",
       "id": 1,
       "bmn_brand": "Perangkat",
       "device_year": 2021,
+      "device_station": "Bergerak",
       "device_condition": "BAIK",
       "description": "Ini merupakan perangkat 2 Model A",
       "photos_url": [
         "/static/uploads/device_children/22222222_1771234365.png"
       ],
-      "updated_at": "2026-02-17T13:02:28.748966"
+      "updated_at": "2026-02-17T13:02:28.748966",
+      "device_name": "Perangkat 2A",
+      "parent_id": 2,
+      "nup_device": "11",
+      "sample_brand": "Perangkat",
+      "device_type": "Perangkat",
+      "device_status": "TERSEDIA",
+      "device_room": "Ruang Perangkat",
+      "created_at": "2026-02-16T16:32:45.287786"
     }
   ],
   "device_groups": [
     {
-      "id": 1,
-      "user_id": 2,
-      "updated_at": "2025-10-31T19:40:36.651848",
       "name": "Grup Monitoring Cuaca",
       "description": "Perangkat untuk monitoring cuaca harian",
-      "created_at": "2025-10-31T19:40:36.651848"
+      "created_at": "2025-10-31T19:40:36.651848",
+      "id": 1,
+      "user_id": 2,
+      "updated_at": "2025-10-31T19:40:36.651848"
     },
     {
-      "id": 2,
-      "user_id": 2,
-      "updated_at": "2025-10-31T19:42:02.894272",
       "name": "Grup Perangkat 2 Complete Set",
       "description": "Semua Perangkat 2",
-      "created_at": "2025-10-31T19:42:02.894272"
+      "created_at": "2025-10-31T19:42:02.894272",
+      "id": 2,
+      "user_id": 2,
+      "updated_at": "2025-10-31T19:42:02.894272"
     },
     {
-      "id": 3,
-      "user_id": 2,
-      "updated_at": "2025-10-31T20:50:41.161969",
       "name": "ALL",
       "description": "Semua device",
-      "created_at": "2025-10-31T20:50:41.161969"
+      "created_at": "2025-10-31T20:50:41.161969",
+      "id": 3,
+      "user_id": 2,
+      "updated_at": "2025-10-31T20:50:41.161969"
     },
     {
-      "id": 4,
-      "user_id": 7,
-      "updated_at": "2025-12-01T17:15:34.977153",
       "name": "Group John",
       "description": "untuk kegiatan monitoring john",
-      "created_at": "2025-12-01T17:15:34.977153"
+      "created_at": "2025-12-01T17:15:34.977153",
+      "id": 4,
+      "user_id": 7,
+      "updated_at": "2025-12-01T17:15:34.977153"
     },
     {
-      "id": 5,
-      "user_id": 10,
-      "updated_at": "2025-12-12T09:40:25.900480",
       "name": "Perangkat kegiatan A",
       "description": "untuk kegiatan A",
-      "created_at": "2025-12-12T09:40:25.900480"
+      "created_at": "2025-12-12T09:40:25.900480",
+      "id": 5,
+      "user_id": 10,
+      "updated_at": "2025-12-12T09:40:25.900480"
     },
     {
-      "id": 6,
-      "user_id": 11,
-      "updated_at": "2025-12-19T16:40:45.774215",
       "name": "Groub Perangkat kegaitan A",
       "description": "untuk kegiatan A",
-      "created_at": "2025-12-19T16:40:45.774215"
+      "created_at": "2025-12-19T16:40:45.774215",
+      "id": 6,
+      "user_id": 11,
+      "updated_at": "2025-12-19T16:40:45.774215"
     }
   ],
   "device_group_items": [
     {
-      "id": 1,
-      "child_device_id": null,
-      "group_id": 1,
-      "device_id": 5,
-      "added_at": "2025-10-31T19:40:36.664885"
-    },
-    {
-      "id": 2,
-      "child_device_id": null,
-      "group_id": 1,
-      "device_id": 6,
-      "added_at": "2025-10-31T19:40:36.670413"
-    },
-    {
-      "id": 3,
-      "child_device_id": null,
       "group_id": 2,
       "device_id": 2,
-      "added_at": "2025-10-31T19:42:02.902238"
-    },
-    {
-      "id": 4,
-      "child_device_id": 3,
-      "group_id": 2,
-      "device_id": null,
-      "added_at": "2025-10-31T19:42:02.908695"
-    },
-    {
-      "id": 5,
-      "child_device_id": null,
-      "group_id": 3,
-      "device_id": 6,
-      "added_at": "2025-10-31T20:50:41.169417"
-    },
-    {
-      "id": 6,
-      "child_device_id": null,
-      "group_id": 3,
-      "device_id": 5,
-      "added_at": "2025-10-31T20:50:41.176470"
-    },
-    {
-      "id": 7,
-      "child_device_id": 3,
-      "group_id": 3,
-      "device_id": null,
-      "added_at": "2025-10-31T20:50:41.182006"
-    },
-    {
-      "id": 8,
-      "child_device_id": null,
-      "group_id": 4,
-      "device_id": 8,
-      "added_at": "2025-12-01T17:15:34.997867"
-    },
-    {
-      "id": 9,
-      "child_device_id": null,
-      "group_id": 4,
-      "device_id": 7,
-      "added_at": "2025-12-01T17:15:35.019238"
-    },
-    {
-      "id": 10,
-      "child_device_id": null,
-      "group_id": 5,
-      "device_id": 8,
-      "added_at": "2025-12-12T09:40:25.921571"
-    },
-    {
-      "id": 11,
-      "child_device_id": null,
-      "group_id": 5,
-      "device_id": 7,
-      "added_at": "2025-12-12T09:40:25.934177"
-    },
-    {
-      "id": 12,
-      "child_device_id": null,
-      "group_id": 5,
-      "device_id": 6,
-      "added_at": "2025-12-12T09:40:25.939412"
-    },
-    {
-      "id": 13,
-      "child_device_id": null,
-      "group_id": 6,
-      "device_id": 8,
-      "added_at": "2025-12-19T16:40:45.803563"
-    },
-    {
-      "id": 14,
-      "child_device_id": null,
-      "group_id": 6,
-      "device_id": 7,
-      "added_at": "2025-12-19T16:40:45.829349"
-    },
-    {
-      "id": 15,
-      "child_device_id": null,
-      "group_id": 6,
-      "device_id": 6,
-      "added_at": "2025-12-19T16:40:45.835353"
+      "added_at": "2025-10-31T19:42:02.902238",
+      "id": 3,
+      "child_device_id": null
     }
   ],
   "device_loans": [
     {
-      "loan_number": "BA-2025-11-001",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": null,
       "loan_start_date": "2025-11-01",
@@ -581,11 +639,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 1,
-      "activity_name": "Kegiatan 1"
+      "activity_name": "Kegiatan 1",
+      "loan_number": "BA-2025-11-001",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-002",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": null,
       "loan_start_date": "2025-11-01",
@@ -605,11 +663,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 3,
-      "activity_name": "Kegiatan 3"
+      "activity_name": "Kegiatan 3",
+      "loan_number": "BA-2025-11-002",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-003",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-01",
@@ -629,11 +687,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 4,
-      "activity_name": "Kegiatan 4"
+      "activity_name": "Kegiatan 4",
+      "loan_number": "BA-2025-11-003",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-004",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-01",
@@ -653,11 +711,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 5,
-      "activity_name": "Kegiatan 5"
+      "activity_name": "Kegiatan 5",
+      "loan_number": "BA-2025-11-004",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-005",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-01",
@@ -677,11 +735,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 6,
-      "activity_name": "Kegiatan 6"
+      "activity_name": "Kegiatan 6",
+      "loan_number": "BA-2025-11-005",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-006",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-02",
@@ -701,11 +759,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 7,
-      "activity_name": "Kegiatan 7"
+      "activity_name": "Kegiatan 7",
+      "loan_number": "BA-2025-11-006",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-008",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-14",
@@ -725,11 +783,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 9,
-      "activity_name": "Kegiatan 9"
+      "activity_name": "Kegiatan 9",
+      "loan_number": "BA-2025-11-008",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-11-007",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-11-05",
@@ -749,11 +807,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 8,
-      "activity_name": "Kegiatan 8"
+      "activity_name": "Kegiatan 8",
+      "loan_number": "BA-2025-11-007",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-12-001",
-      "usage_duration_days": 1,
       "updated_by": 7,
       "pihak_1_id": 1,
       "loan_start_date": "2025-12-02",
@@ -773,11 +831,11 @@
       "borrower_user_id": 7,
       "returned_by_user_id": 7,
       "id": 10,
-      "activity_name": "Kegiatan John"
+      "activity_name": "Kegiatan John",
+      "loan_number": "BA-2025-12-001",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-12-003",
-      "usage_duration_days": 1,
       "updated_by": 9,
       "pihak_1_id": 1,
       "loan_start_date": "2025-12-12",
@@ -797,11 +855,11 @@
       "borrower_user_id": 9,
       "returned_by_user_id": 9,
       "id": 12,
-      "activity_name": "kegiatan 1"
+      "activity_name": "kegiatan 1",
+      "loan_number": "BA-2025-12-003",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-12-002",
-      "usage_duration_days": 1,
       "updated_by": 8,
       "pihak_1_id": 1,
       "loan_start_date": "2025-12-10",
@@ -821,11 +879,11 @@
       "borrower_user_id": 8,
       "returned_by_user_id": 8,
       "id": 11,
-      "activity_name": "Kegiatan fulan 1"
+      "activity_name": "Kegiatan fulan 1",
+      "loan_number": "BA-2025-12-002",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-12-004",
-      "usage_duration_days": 1,
       "updated_by": 10,
       "pihak_1_id": 1,
       "loan_start_date": "2025-12-13",
@@ -845,11 +903,11 @@
       "borrower_user_id": 10,
       "returned_by_user_id": 10,
       "id": 13,
-      "activity_name": "Kegiatan Monitoring"
+      "activity_name": "Kegiatan Monitoring",
+      "loan_number": "BA-2025-12-004",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2025-12-005",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2025-12-12",
@@ -869,11 +927,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 14,
-      "activity_name": "Kegiatan"
+      "activity_name": "Kegiatan",
+      "loan_number": "BA-2025-12-005",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2026-02-001",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2026-02-15",
@@ -893,11 +951,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 15,
-      "activity_name": "Kegiatan coba pengembalian"
+      "activity_name": "Kegiatan coba pengembalian",
+      "loan_number": "BA-2026-02-001",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2026-02-002",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2026-02-15",
@@ -917,11 +975,11 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 16,
-      "activity_name": "Kegiatan percobaan"
+      "activity_name": "Kegiatan percobaan",
+      "loan_number": "BA-2026-02-002",
+      "usage_duration_days": 1
     },
     {
-      "loan_number": "BA-2026-02-003",
-      "usage_duration_days": 1,
       "updated_by": 2,
       "pihak_1_id": 1,
       "loan_start_date": "2026-02-17",
@@ -941,950 +999,846 @@
       "borrower_user_id": 2,
       "returned_by_user_id": 2,
       "id": 17,
-      "activity_name": "Kegiatan 1"
+      "activity_name": "Kegiatan 1",
+      "loan_number": "BA-2026-02-003",
+      "usage_duration_days": 1
     }
   ],
   "device_loan_items": [
     {
-      "created_by": 2,
-      "deleted_by": null,
-      "updated_at": "2026-02-15T16:24:57.069469",
-      "id": 30,
-      "device_id": 11,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2026-02-15T16:24:31.278494",
+      "id": 30,
       "loan_id": 16,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-16T17:53:40.458294",
-      "id": 14,
-      "device_id": 2,
+      "updated_at": "2026-02-15T16:24:57.069469",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-04T13:23:32.199368",
+      "id": 14,
       "loan_id": 8,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 2,
+      "deleted_by": null,
+      "updated_at": "2025-11-16T17:53:40.458294",
+      "device_id": 2,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 10,
-      "deleted_by": null,
-      "updated_at": "2025-12-12T09:50:46.303038",
-      "id": 23,
-      "device_id": 8,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 10,
       "deleted_at": null,
       "created_at": "2025-12-12T09:48:58.840809",
+      "id": 23,
       "loan_id": 13,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 10,
+      "deleted_by": null,
+      "updated_at": "2025-12-12T09:50:46.303038",
+      "device_id": null,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 2,
-      "deleted_by": null,
-      "updated_at": "2026-02-15T16:15:10.058314",
-      "id": 29,
-      "device_id": 11,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2026-02-15T15:56:17.277115",
+      "id": 29,
       "loan_id": 15,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T13:53:30.085290",
-      "id": 1,
-      "device_id": 6,
+      "updated_at": "2026-02-15T16:15:10.058314",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T13:53:07.917851",
+      "id": 1,
       "loan_id": 1,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:22:27.240877",
-      "id": 2,
-      "device_id": 5,
+      "updated_at": "2025-11-01T13:53:30.085290",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:22:17.632142",
+      "id": 2,
       "loan_id": 3,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:22:27.244469",
-      "id": 3,
-      "device_id": 2,
+      "updated_at": "2025-11-01T14:22:27.240877",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:22:17.633139",
+      "id": 3,
       "loan_id": 3,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:44:50.006750",
-      "id": 4,
+      "updated_at": "2025-11-01T14:22:27.244469",
       "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:29:52.592788",
+      "id": 4,
       "loan_id": 4,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:45:46.111386",
-      "id": 5,
-      "device_id": 6,
+      "updated_at": "2025-11-01T14:44:50.006750",
+      "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:45:36.012358",
+      "id": 5,
       "loan_id": 5,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:45:46.114161",
-      "id": 6,
-      "device_id": 5,
+      "updated_at": "2025-11-01T14:45:46.111386",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:45:36.016879",
+      "id": 6,
       "loan_id": 5,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T14:45:46.116685",
-      "id": 7,
-      "device_id": 2,
+      "updated_at": "2025-11-01T14:45:46.114161",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T14:45:36.017874",
+      "id": 7,
       "loan_id": 5,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T18:16:10.331400",
-      "id": 8,
+      "updated_at": "2025-11-01T14:45:46.116685",
       "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T15:52:55.570233",
+      "id": 8,
       "loan_id": 6,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T18:35:39.526242",
-      "id": 9,
-      "device_id": 6,
+      "updated_at": "2025-11-01T18:16:10.331400",
+      "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T18:16:39.287463",
+      "id": 9,
       "loan_id": 7,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T18:35:39.530258",
-      "id": 10,
-      "device_id": 5,
+      "updated_at": "2025-11-01T18:35:39.526242",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T18:16:39.291162",
+      "id": 10,
       "loan_id": 7,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-01T18:35:39.531746",
-      "id": 11,
-      "device_id": 2,
+      "updated_at": "2025-11-01T18:35:39.530258",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-01T18:16:39.292332",
+      "id": 11,
       "loan_id": 7,
-      "child_device_id": 3,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-16T17:53:37.613559",
-      "id": 15,
-      "device_id": 6,
+      "updated_at": "2025-11-01T18:35:39.531746",
+      "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-13T21:45:17.675818",
+      "id": 15,
       "loan_id": 9,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-16T17:53:37.623593",
-      "id": 16,
-      "device_id": 2,
+      "updated_at": "2025-11-16T17:53:37.613559",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-13T21:45:17.686841",
+      "id": 16,
       "loan_id": 9,
-      "child_device_id": 5,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-16T17:53:40.449549",
-      "id": 12,
-      "device_id": 6,
+      "updated_at": "2025-11-16T17:53:37.623593",
+      "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-04T13:23:32.174814",
+      "id": 12,
       "loan_id": 8,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-11-16T17:53:40.455779",
-      "id": 13,
-      "device_id": 5,
+      "updated_at": "2025-11-16T17:53:40.449549",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-11-04T13:23:32.197364",
+      "id": 13,
       "loan_id": 8,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 2,
+      "deleted_by": null,
+      "updated_at": "2025-11-16T17:53:40.455779",
+      "device_id": null,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 7,
-      "deleted_by": null,
-      "updated_at": "2025-12-01T17:14:44.254251",
-      "id": 17,
-      "device_id": 8,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 7,
       "deleted_at": null,
       "created_at": "2025-12-01T17:11:35.718962",
+      "id": 17,
       "loan_id": 10,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 7,
       "deleted_by": null,
       "updated_at": "2025-12-01T17:14:44.254251",
-      "id": 18,
-      "device_id": 2,
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 7,
       "deleted_at": null,
       "created_at": "2025-12-01T17:11:35.731187",
+      "id": 18,
       "loan_id": 10,
-      "child_device_id": 5,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
-      "created_by": 9,
+      "condition_notes": "",
+      "created_by": 7,
       "deleted_by": null,
-      "updated_at": "2025-12-12T03:33:48.259938",
-      "id": 22,
+      "updated_at": "2025-12-01T17:14:44.254251",
       "device_id": 2,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 9,
       "deleted_at": null,
       "created_at": "2025-12-12T03:33:16.299558",
+      "id": 22,
       "loan_id": 12,
-      "child_device_id": 5,
+      "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 9,
+      "deleted_by": null,
+      "updated_at": "2025-12-12T03:33:48.259938",
+      "device_id": 2,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 8,
-      "deleted_by": null,
-      "updated_at": "2025-12-12T05:53:51.984782",
-      "id": 19,
-      "device_id": 8,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 8,
       "deleted_at": null,
       "created_at": "2025-12-10T15:50:43.942054",
+      "id": 19,
       "loan_id": 11,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 8,
       "deleted_by": null,
-      "updated_at": "2025-12-12T05:53:52.016863",
-      "id": 20,
-      "device_id": 7,
+      "updated_at": "2025-12-12T05:53:51.984782",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 8,
       "deleted_at": null,
       "created_at": "2025-12-10T15:50:43.952077",
+      "id": 20,
       "loan_id": 11,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 8,
       "deleted_by": null,
-      "updated_at": "2025-12-12T05:53:52.032697",
-      "id": 21,
-      "device_id": 6,
+      "updated_at": "2025-12-12T05:53:52.016863",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 8,
       "deleted_at": null,
       "created_at": "2025-12-10T15:50:43.955092",
+      "id": 21,
       "loan_id": 11,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 8,
+      "deleted_by": null,
+      "updated_at": "2025-12-12T05:53:52.032697",
+      "device_id": null,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 10,
-      "deleted_by": null,
-      "updated_at": "2025-12-12T09:50:46.314311",
-      "id": 24,
-      "device_id": 7,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 10,
       "deleted_at": null,
       "created_at": "2025-12-12T09:48:58.861124",
+      "id": 24,
       "loan_id": 13,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 10,
       "deleted_by": null,
-      "updated_at": "2025-12-12T09:50:46.322334",
-      "id": 25,
-      "device_id": 6,
+      "updated_at": "2025-12-12T09:50:46.314311",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 10,
       "deleted_at": null,
       "created_at": "2025-12-12T09:48:58.875199",
+      "id": 25,
       "loan_id": 13,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 10,
+      "deleted_by": null,
+      "updated_at": "2025-12-12T09:50:46.322334",
+      "device_id": null,
+      "quantity": 1,
+      "condition_after": null
     },
     {
-      "created_by": 2,
-      "deleted_by": null,
-      "updated_at": "2025-12-12T10:00:55.149953",
-      "id": 26,
-      "device_id": 8,
-      "quantity": 1,
-      "condition_after": null,
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-12-12T09:59:46.501162",
+      "id": 26,
       "loan_id": 14,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-12-12T10:00:55.157662",
-      "id": 27,
-      "device_id": 7,
+      "updated_at": "2025-12-12T10:00:55.149953",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-12-12T09:59:46.513363",
+      "id": 27,
       "loan_id": 14,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2025-12-12T10:00:55.161670",
-      "id": 28,
-      "device_id": 6,
+      "updated_at": "2025-12-12T10:00:55.157662",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": null,
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2025-12-12T09:59:46.520602",
+      "id": 28,
       "loan_id": 14,
       "child_device_id": null,
       "condition_before": "BAIK",
-      "condition_notes": ""
-    },
-    {
+      "condition_notes": "",
       "created_by": 2,
       "deleted_by": null,
-      "updated_at": "2026-02-17T13:02:28.748966",
-      "id": 31,
-      "device_id": 2,
+      "updated_at": "2025-12-12T10:00:55.161670",
+      "device_id": null,
       "quantity": 1,
-      "condition_after": "BAIK",
+      "condition_after": null
+    },
+    {
       "updated_by": 2,
       "deleted_at": null,
       "created_at": "2026-02-17T13:02:16.561972",
+      "id": 31,
       "loan_id": 17,
       "child_device_id": 1,
       "condition_before": "BAIK",
-      "condition_notes": ""
+      "condition_notes": "",
+      "created_by": 2,
+      "deleted_by": null,
+      "updated_at": "2026-02-17T13:02:28.748966",
+      "device_id": 2,
+      "quantity": 1,
+      "condition_after": "BAIK"
     }
   ],
   "loan_history": [
     {
-      "created_by": null,
-      "deleted_by": null,
-      "updated_at": null,
-      "loan_id": 9,
-      "new_status": "OVERDUE",
-      "changed_by_user_id": null,
-      "notes": "Loan marked as overdue automatically",
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-11-16T17:35:00.082482",
       "id": 1,
       "old_status": "ACTIVE",
       "change_reason": "Automatic system update",
-      "change_date": "2025-11-16T17:35:00.082482"
-    },
-    {
+      "change_date": "2025-11-16T17:35:00.082482",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 8,
+      "loan_id": 9,
       "new_status": "OVERDUE",
       "changed_by_user_id": null,
-      "notes": "Loan marked as overdue automatically",
+      "notes": "Loan marked as overdue automatically"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-11-16T17:35:00.082482",
       "id": 2,
       "old_status": "ACTIVE",
       "change_reason": "Automatic system update",
-      "change_date": "2025-11-16T17:35:00.082482"
-    },
-    {
+      "change_date": "2025-11-16T17:35:00.082482",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 9,
-      "new_status": "RETURNED",
-      "changed_by_user_id": 2,
-      "notes": "",
+      "loan_id": 8,
+      "new_status": "OVERDUE",
+      "changed_by_user_id": null,
+      "notes": "Loan marked as overdue automatically"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-11-16T17:53:37.630709",
       "id": 3,
       "old_status": "OVERDUE",
       "change_reason": "Loan returned",
-      "change_date": "2025-11-16T17:53:37.630709"
-    },
-    {
+      "change_date": "2025-11-16T17:53:37.630709",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 8,
+      "loan_id": 9,
       "new_status": "RETURNED",
       "changed_by_user_id": 2,
-      "notes": "",
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-11-16T17:53:40.461817",
       "id": 4,
       "old_status": "OVERDUE",
       "change_reason": "Loan returned",
-      "change_date": "2025-11-16T17:53:40.461817"
-    },
-    {
+      "change_date": "2025-11-16T17:53:40.461817",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 10,
-      "new_status": "ACTIVE",
-      "changed_by_user_id": 7,
-      "notes": "Loan automatically activated upon creation",
+      "loan_id": 8,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 2,
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-01T17:11:35.739331",
       "id": 5,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2025-12-01T17:11:35.739331"
-    },
-    {
+      "change_date": "2025-12-01T17:11:35.739331",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 10,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 7,
-      "notes": "Aman",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-01T17:14:44.254251",
       "id": 6,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2025-12-01T17:14:44.254251"
-    },
-    {
+      "change_date": "2025-12-01T17:14:44.254251",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 11,
-      "new_status": "ACTIVE",
-      "changed_by_user_id": 8,
-      "notes": "Loan automatically activated upon creation",
+      "loan_id": 10,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 7,
+      "notes": "Aman"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-10T15:50:43.956089",
       "id": 7,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2025-12-10T15:50:43.956089"
-    },
-    {
+      "change_date": "2025-12-10T15:50:43.956089",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 12,
+      "loan_id": 11,
       "new_status": "ACTIVE",
-      "changed_by_user_id": 9,
-      "notes": "Loan automatically activated upon creation",
+      "changed_by_user_id": 8,
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T03:33:16.315576",
       "id": 8,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2025-12-12T03:33:16.315576"
-    },
-    {
+      "change_date": "2025-12-12T03:33:16.315576",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 12,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 9,
-      "notes": "",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T03:33:48.266653",
       "id": 9,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2025-12-12T03:33:48.266653"
-    },
-    {
+      "change_date": "2025-12-12T03:33:48.266653",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 11,
-      "new_status": "OVERDUE",
-      "changed_by_user_id": null,
-      "notes": "Loan marked as overdue automatically",
+      "loan_id": 12,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 9,
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T04:00:00.015018",
       "id": 10,
       "old_status": "ACTIVE",
       "change_reason": "Automatic system update",
-      "change_date": "2025-12-12T04:00:00.015018"
-    },
-    {
+      "change_date": "2025-12-12T04:00:00.015018",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 11,
-      "new_status": "RETURNED",
-      "changed_by_user_id": 8,
-      "notes": "",
+      "new_status": "OVERDUE",
+      "changed_by_user_id": null,
+      "notes": "Loan marked as overdue automatically"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T05:53:52.041999",
       "id": 11,
       "old_status": "OVERDUE",
       "change_reason": "Loan returned",
-      "change_date": "2025-12-12T05:53:52.041999"
-    },
-    {
+      "change_date": "2025-12-12T05:53:52.041999",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 13,
-      "new_status": "ACTIVE",
-      "changed_by_user_id": 10,
-      "notes": "Loan automatically activated upon creation",
+      "loan_id": 11,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 8,
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T09:48:58.875819",
       "id": 12,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2025-12-12T09:48:58.875819"
-    },
-    {
+      "change_date": "2025-12-12T09:48:58.875819",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 13,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 10,
-      "notes": "Perangkat 8 rusak ringan",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T09:50:46.330665",
       "id": 13,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2025-12-12T09:50:46.330665"
-    },
-    {
+      "change_date": "2025-12-12T09:50:46.330665",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 14,
-      "new_status": "ACTIVE",
-      "changed_by_user_id": 2,
-      "notes": "Loan automatically activated upon creation",
+      "loan_id": 13,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 10,
+      "notes": "Perangkat 8 rusak ringan"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T09:59:46.520602",
       "id": 14,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2025-12-12T09:59:46.520602"
-    },
-    {
+      "change_date": "2025-12-12T09:59:46.520602",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 14,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 2,
-      "notes": "",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2025-12-12T10:00:55.164754",
       "id": 15,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2025-12-12T10:00:55.164754"
-    },
-    {
+      "change_date": "2025-12-12T10:00:55.164754",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 15,
-      "new_status": "ACTIVE",
+      "loan_id": 14,
+      "new_status": "RETURNED",
       "changed_by_user_id": 2,
-      "notes": "Loan automatically activated upon creation",
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-15T15:56:17.277115",
       "id": 16,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2026-02-15T15:56:17.277115"
-    },
-    {
+      "change_date": "2026-02-15T15:56:17.277115",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 15,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 2,
-      "notes": "Rusak bagian atas",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-15T16:15:10.068665",
       "id": 17,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2026-02-15T16:15:10.068665"
-    },
-    {
+      "change_date": "2026-02-15T16:15:10.068665",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 16,
-      "new_status": "ACTIVE",
+      "loan_id": 15,
+      "new_status": "RETURNED",
       "changed_by_user_id": 2,
-      "notes": "Loan automatically activated upon creation",
+      "notes": "Rusak bagian atas"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-15T16:24:31.278494",
       "id": 18,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2026-02-15T16:24:31.278494"
-    },
-    {
+      "change_date": "2026-02-15T16:24:31.278494",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 16,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 2,
-      "notes": "",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-15T16:24:57.075002",
       "id": 19,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2026-02-15T16:24:57.075002"
-    },
-    {
+      "change_date": "2026-02-15T16:24:57.075002",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
-      "loan_id": 17,
-      "new_status": "ACTIVE",
+      "loan_id": 16,
+      "new_status": "RETURNED",
       "changed_by_user_id": 2,
-      "notes": "Loan automatically activated upon creation",
+      "notes": ""
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-17T13:02:16.596074",
       "id": 20,
       "old_status": null,
       "change_reason": "Loan created and auto-activated",
-      "change_date": "2026-02-17T13:02:16.596074"
-    },
-    {
+      "change_date": "2026-02-17T13:02:16.596074",
       "created_by": null,
       "deleted_by": null,
       "updated_at": null,
       "loan_id": 17,
-      "new_status": "RETURNED",
+      "new_status": "ACTIVE",
       "changed_by_user_id": 2,
-      "notes": "",
+      "notes": "Loan automatically activated upon creation"
+    },
+    {
       "updated_by": null,
       "deleted_at": null,
       "created_at": "2026-02-17T13:02:28.784620",
       "id": 21,
       "old_status": "ACTIVE",
       "change_reason": "Loan returned",
-      "change_date": "2026-02-17T13:02:28.784620"
+      "change_date": "2026-02-17T13:02:28.784620",
+      "created_by": null,
+      "deleted_by": null,
+      "updated_at": null,
+      "loan_id": 17,
+      "new_status": "RETURNED",
+      "changed_by_user_id": 2,
+      "notes": ""
     }
   ],
-  "condition_change_requests": [
-    {
-      "loan_item_id": 14,
-      "status": "APPROVED",
-      "updated_by": null,
-      "device_id": null,
-      "requested_at": "2025-11-13T21:38:14.478139",
-      "created_by": null,
-      "child_device_id": 3,
-      "reviewed_at": "2025-11-13T21:38:27.973115",
-      "deleted_at": null,
-      "requested_by_user_id": 2,
-      "reviewed_by_admin_id": 1,
-      "deleted_by": null,
-      "old_condition": null,
-      "created_at": "2025-11-13T21:38:14.478139",
-      "new_condition": null,
-      "updated_at": null,
-      "reason": "Perubahan kondisi saat pengembalian",
-      "id": 1,
-      "evidence_photo_url": null
-    },
-    {
-      "loan_item_id": 14,
-      "status": "REJECTED",
-      "updated_by": null,
-      "device_id": null,
-      "requested_at": "2025-11-16T17:53:40.471855",
-      "created_by": null,
-      "child_device_id": 3,
-      "reviewed_at": "2025-11-16T17:55:26.998249",
-      "deleted_at": null,
-      "requested_by_user_id": 2,
-      "reviewed_by_admin_id": 1,
-      "deleted_by": null,
-      "old_condition": null,
-      "created_at": "2025-11-16T17:53:40.471855",
-      "new_condition": null,
-      "updated_at": null,
-      "reason": "Perubahan kondisi saat pengembalian | Rejected: Tidak ada",
-      "id": 2,
-      "evidence_photo_url": null
-    },
-    {
-      "loan_item_id": 23,
-      "status": "REJECTED",
-      "updated_by": null,
-      "device_id": 8,
-      "requested_at": "2025-12-12T09:50:46.361651",
-      "created_by": null,
-      "child_device_id": null,
-      "reviewed_at": "2026-02-15T16:16:05.810489",
-      "deleted_at": null,
-      "requested_by_user_id": 10,
-      "reviewed_by_admin_id": 1,
-      "deleted_by": null,
-      "old_condition": null,
-      "created_at": "2025-12-12T09:50:46.361651",
-      "new_condition": null,
-      "updated_at": null,
-      "reason": "Perubahan kondisi saat pengembalian | Rejected: Kondisi perangkat masih baik",
-      "id": 3,
-      "evidence_photo_url": null
-    },
-    {
-      "loan_item_id": 29,
-      "status": "APPROVED",
-      "updated_by": null,
-      "device_id": 11,
-      "requested_at": "2026-02-15T16:15:10.096460",
-      "created_by": null,
-      "child_device_id": null,
-      "reviewed_at": "2026-02-15T16:16:21.613260",
-      "deleted_at": null,
-      "requested_by_user_id": 2,
-      "reviewed_by_admin_id": 1,
-      "deleted_by": null,
-      "old_condition": null,
-      "created_at": "2026-02-15T16:15:10.096460",
-      "new_condition": null,
-      "updated_at": null,
-      "reason": "Perubahan kondisi saat pengembalian",
-      "id": 4,
-      "evidence_photo_url": "/static/uploads/condition_evidence/evidence_4_1771146910.png"
-    },
-    {
-      "loan_item_id": 30,
-      "status": "REJECTED",
-      "updated_by": null,
-      "device_id": 11,
-      "requested_at": "2026-02-15T16:24:57.092237",
-      "created_by": null,
-      "child_device_id": null,
-      "reviewed_at": "2026-02-15T16:25:37.096163",
-      "deleted_at": null,
-      "requested_by_user_id": 2,
-      "reviewed_by_admin_id": 1,
-      "deleted_by": null,
-      "old_condition": null,
-      "created_at": "2026-02-15T16:24:57.092237",
-      "new_condition": null,
-      "updated_at": null,
-      "reason": "Perubahan kondisi saat pengembalian",
-      "id": 5,
-      "evidence_photo_url": null
-    }
-  ]
+  "condition_change_requests": []
 }

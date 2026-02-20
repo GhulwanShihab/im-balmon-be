@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import create_engine
 from src.core.config import settings
-from src.models.user import User
+from src.models.user import User, Role, UserRole
 from src.models.location import Location
 from src.models.perangkat import Device
 from src.models.device_child import DeviceChild
@@ -44,6 +44,16 @@ def export_data():
         print("Exporting Users...")
         users = session.exec(select(User)).all()
         data["users"] = [user.model_dump() for user in users]
+        
+        # 1.1 Roles
+        print("Exporting Roles...")
+        roles = session.exec(select(Role)).all()
+        data["roles"] = [role.model_dump() for role in roles]
+
+        # 1.2 User Roles
+        print("Exporting User Roles...")
+        user_roles = session.exec(select(UserRole)).all()
+        data["user_roles"] = [ur.model_dump() for ur in user_roles]
         
         # 2. Locations
         print("Exporting Locations...")
