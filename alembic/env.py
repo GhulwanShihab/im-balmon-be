@@ -71,8 +71,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    section = config.get_section(config.config_ini_section, {})
+    # section["sqlalchemy.url"] = str(settings.DATABASE_URI)
+    section["sqlalchemy.url"] = "postgresql://postgres:password@127.0.0.1:5432/imbalmon"
+    print(f"DEBUG: Alembic using URL: {section['sqlalchemy.url']}")
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

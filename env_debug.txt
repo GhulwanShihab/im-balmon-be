@@ -1,0 +1,7 @@
+DATABASE_URI from settings: postgresql://postgres:password@localhost:5432/imbalmon
+POSTGRES_DB from settings: imbalmon
+Current working directory: D:\TA\IM-Balmon\backend
+.env file path: D:\TA\IM-Balmon\backend\.env
+.env file exists
+.env content snippet:
+POSTGRES_DB="imbalmon"

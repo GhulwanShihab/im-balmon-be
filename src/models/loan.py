@@ -187,8 +187,8 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     child_device_id: Optional[int] = Field(foreign_key="device_children.id", default=None)
     requested_by_user_id: int = Field(foreign_key="users.id", description="User yang meminta perubahan")
 
-    old_condition: str = Field(max_length=50)
-    new_condition: str = Field(max_length=50)
+    old_condition: Optional[str] = Field(default=None, max_length=50)
+    new_condition: Optional[str] = Field(default=None, max_length=50)
 
     reason: Optional[str] = Field(None, description="Alasan perubahan kondisi")
     evidence_photo_url: Optional[str] = Field(None, description="URL foto bukti pergantian kondisi")

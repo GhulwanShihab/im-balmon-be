@@ -1,0 +1,5 @@
+✅ devices: 2 rows (Match)
+✅ device_loans: 16 rows (Match)
+✅ device_loan_items: 31 rows (Match)
+
+SUCCESS: All table counts match!
