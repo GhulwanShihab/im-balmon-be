@@ -15,9 +15,8 @@ from src.core.config import settings
 from sqlmodel import SQLModel
 
 # Import all models so they are registered with SQLModel
-from src.models.user import User
-from src.models.perangkat import Device
-from src.models.loan import DeviceLoan, DeviceLoanItem, LoanHistory, DeviceConditionChangeRequest
+# Import all models so they are registered with SQLModel
+from src.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -72,8 +71,14 @@ def run_migrations_online() -> None:
 
     """
     section = config.get_section(config.config_ini_section, {})
-    # section["sqlalchemy.url"] = str(settings.DATABASE_URI)
-    section["sqlalchemy.url"] = "postgresql://postgres:password@127.0.0.1:5432/imbalmon"
+    # Check for env var override
+    db_url = os.getenv("ALEMBIC_DB_URL")
+    if db_url:
+        section["sqlalchemy.url"] = db_url
+    else:
+        # Fallback to default
+        section["sqlalchemy.url"] = "postgresql://postgres:password@127.0.0.1:5432/imbalmon"
+    
     print(f"DEBUG: Alembic using URL: {section['sqlalchemy.url']}")
     
     connectable = engine_from_config(
