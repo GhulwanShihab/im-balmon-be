@@ -15,8 +15,13 @@ from src.core.config import settings
 from sqlmodel import SQLModel
 
 # Import all models so they are registered with SQLModel
-# Import all models so they are registered with SQLModel
-from src.models import *
+from src.models.user import User, Role, UserRole, PasswordResetToken, MFABackupCode
+from src.models.perangkat import Device
+from src.models.device_child import DeviceChild
+from src.models.employee import Employee
+from src.models.location import Location
+from src.models.loan import DeviceLoan, DeviceLoanItem, LoanHistory, DeviceConditionChangeRequest
+from src.models.device_group import DeviceGroup, DeviceGroupItem
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -71,13 +76,14 @@ def run_migrations_online() -> None:
 
     """
     section = config.get_section(config.config_ini_section, {})
-    # Check for env var override
-    db_url = os.getenv("ALEMBIC_DB_URL")
-    if db_url:
-        section["sqlalchemy.url"] = db_url
-    else:
-        # Fallback to default
-        section["sqlalchemy.url"] = "postgresql://postgres:password@127.0.0.1:5432/imbalmon"
+    # section["sqlalchemy.url"] = str(settings.DATABASE_URI)
+    # section["sqlalchemy.url"] = "postgresql://postgres:password@127.0.0.1:5432/imbalmon"
+    
+    # Use settings from .env
+    section["sqlalchemy.url"] = str(settings.DATABASE_URI)
+    
+    # Force use of sync driver if needed (optional, depends on installed drivers)
+    # If standard 'postgresql://' is used, it defaults to psycopg2.
     
     print(f"DEBUG: Alembic using URL: {section['sqlalchemy.url']}")
     
