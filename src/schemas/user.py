@@ -46,6 +46,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     """Schema for user response."""
     id: int
+    uuid: str
     is_verified: bool
     password_changed_at: Optional[datetime] = None
     force_password_change: bool

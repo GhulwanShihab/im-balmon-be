@@ -143,8 +143,8 @@ def require_roles(required_roles: List[str]):
 
 
 # Common role dependencies (legacy compatibility)
-admin_required = require_roles(["admin"])
-user_required = require_roles(["user", "admin"])
+admin_required = require_roles(["admin", "superadmin"])
+user_required = require_roles(["user", "admin", "superadmin"])
 
 
 async def require_admin(
@@ -158,7 +158,7 @@ async def require_admin(
     """
     user_roles = current_user.get("roles", [])
     
-    if "admin" not in user_roles:
+    if "admin" not in user_roles and "superadmin" not in user_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required",

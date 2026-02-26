@@ -110,6 +110,7 @@ class AuthService:
         """Request password reset token."""
         from src.repositories.user import UserRepository
         from src.core.database import get_db
+        from src.services.email import send_password_reset_email
         
         # Get database session (this would be injected in real implementation)
         async for session in get_db():
@@ -127,11 +128,15 @@ class AuthService:
             # Save token to database
             await user_repo.create_password_reset_token(user.id, token, expires_at)
             
-            # TODO: Send email with reset link (Step 5 implementation)
-            # For now, we'll just return the token (remove this in production)
+            # Send reset email
+            await send_password_reset_email(
+                email=user.email,
+                nama=user.nama,
+                token=token
+            )
+            
             return {
-                "message": "Password reset token generated",
-                "token": token  # Remove this in production
+                "message": "If the email exists, a reset link has been sent"
             }
 
     async def confirm_password_reset(self, reset_data: PasswordResetConfirm) -> dict:

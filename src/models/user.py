@@ -1,5 +1,6 @@
 """User model with password security features - FIXED."""
 
+import uuid as uuid_lib
 from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlmodel import Field, SQLModel, Relationship, Column, JSON
@@ -17,6 +18,7 @@ class User(BaseModel, SQLModel, table=True):
     __tablename__ = "users"
     
     id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: str = Field(default_factory=lambda: str(uuid_lib.uuid4()), unique=True, index=True, nullable=False)
     nama: str = Field(index=True, max_length=255, nullable=False)  # Replaced username
     email: str = Field(unique=True, index=True, nullable=False)
     hashed_password: str

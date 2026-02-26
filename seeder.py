@@ -28,6 +28,7 @@ DEFAULT_ADMIN_NAMA = os.getenv("ADMIN_NAMA", "Administrator")
 async def create_basic_roles(session):
     """Create basic system roles if not exist."""
     roles_to_create = [
+        {"name": "superadmin", "description": "Super Administrator with full access including admin management"},
         {"name": "admin", "description": "Administrator with full access"},
         {"name": "manager", "description": "Manager with elevated access"},
         {"name": "user", "description": "Regular user with basic access"},
@@ -46,25 +47,25 @@ async def create_basic_roles(session):
 
 async def create_admin_user(session):
     """Create default admin user if not exists."""
-    # Ensure admin role exists
-    result = await session.execute(select(Role).where(Role.name == "admin"))
-    admin_role = result.scalars().first()
-    if not admin_role:
-        admin_role = Role(name="admin", description="Administrator with full access")
-        session.add(admin_role)
+    # Ensure superadmin role exists
+    result = await session.execute(select(Role).where(Role.name == "superadmin"))
+    superadmin_role = result.scalars().first()
+    if not superadmin_role:
+        superadmin_role = Role(name="superadmin", description="Super Administrator with full access including admin management")
+        session.add(superadmin_role)
         await session.commit()
-        await session.refresh(admin_role)
-        print("✅ Created admin role")
+        await session.refresh(superadmin_role)
+        print("✅ Created superadmin role")
 
-    # Check if any admin user already exists
+    # Check if any superadmin user already exists
     result = await session.execute(
-        select(User).join(UserRole).join(Role).where(Role.name == "admin")
+        select(User).join(UserRole).join(Role).where(Role.name == "superadmin")
     )
     existing_admin = result.scalars().first()
 
     if existing_admin:
-        print(f"ℹ️ Admin already exists with email: {existing_admin.email}")
-        print("🔒 Seeder will NOT overwrite existing admin credentials.")
+        print(f"ℹ️ Superadmin already exists with email: {existing_admin.email}")
+        print("🔒 Seeder will NOT overwrite existing superadmin credentials.")
         return
 
     # Create default admin
@@ -84,15 +85,16 @@ async def create_admin_user(session):
     await session.commit()
     await session.refresh(admin_user)
 
-    # Assign admin role
-    user_role = UserRole(user_id=admin_user.id, role_id=admin_role.id)
+    # Assign superadmin role
+    user_role = UserRole(user_id=admin_user.id, role_id=superadmin_role.id)
     session.add(user_role)
     await session.commit()
 
-    print("✅ Admin user created successfully!")
+    print("✅ Superadmin user created successfully!")
     print(f"👤 Nama: {DEFAULT_ADMIN_NAMA}")
     print(f"📧 Email: {DEFAULT_ADMIN_EMAIL}")
     print(f"🔑 Password: {DEFAULT_ADMIN_PASSWORD}")
+    print(f"🛡️ Role: superadmin")
     print("⚠️  Change this password immediately after first login!")
 
 

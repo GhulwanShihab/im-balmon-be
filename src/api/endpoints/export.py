@@ -56,7 +56,7 @@ async def export_loan_document(
     
     # Check if user can access this loan (own loan or admin)
     user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    if "admin" not in user_roles and "superadmin" not in user_roles and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"

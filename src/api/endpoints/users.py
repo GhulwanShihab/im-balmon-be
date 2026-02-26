@@ -30,6 +30,35 @@ async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserServi
     return UserService(user_repo)
 
 
+def _is_superadmin(current_user: dict) -> bool:
+    """Check if current user has superadmin role."""
+    return "superadmin" in current_user.get("roles", [])
+
+
+def _is_admin_role(role_names: list) -> bool:
+    """Check if any of the role names is admin or superadmin."""
+    admin_roles = {"admin", "superadmin"}
+    return bool(admin_roles & set(role_names))
+
+
+async def _target_user_has_admin_role(user_service: UserService, user_id: int) -> bool:
+    """Check if a target user has admin or superadmin role."""
+    try:
+        user_with_roles = await user_service.get_user_with_roles(user_id)
+        role_names = [r.name for r in user_with_roles.roles]
+        return _is_admin_role(role_names)
+    except Exception:
+        return False
+
+
+async def _resolve_user_id(user_uuid: str, user_service: UserService) -> int:
+    """Resolve UUID to internal user ID. Raises 404 if not found."""
+    user = await user_service.user_repo.get_by_uuid(user_uuid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user.id
+
+
 # ============================================================================
 # CURRENT USER ENDPOINTS - All authenticated users
 # ============================================================================
@@ -96,6 +125,7 @@ async def get_users(
     page_size: int = Query(10, ge=1, le=100, description="Items per page"),
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
+    current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -119,7 +149,18 @@ async def get_users(
         filters["role_id"] = role_id
     
     skip = (page - 1) * page_size
-    return await user_service.get_all_users(skip, page_size, filters, sort_by, sort_order)
+    result = await user_service.get_all_users(skip, page_size, filters, sort_by, sort_order)
+    
+    # Jika bukan superadmin, sembunyikan user dengan role admin/superadmin
+    if not _is_superadmin(current_user):
+        filtered_users = []
+        for u in result.users:
+            if not _is_admin_role(u.role_names or []):
+                filtered_users.append(u)
+        result.users = filtered_users
+        result.total = len(filtered_users)
+    
+    return result
 
 
 @router.get("/stats", response_model=UserStats, dependencies=[Depends(require_permission(Permission.USER_STATS))])
@@ -161,31 +202,32 @@ async def get_pending_users(
     **Permission Required:** USER_VIEW_ALL
     **Roles:** admin, manager
     """
-    filters = {"is_active": False, "is_verified": False}
+    filters = {"is_active": False, "is_verified": True}
     skip = (page - 1) * page_size
     return await user_service.get_all_users(skip, page_size, filters, "created_at", "asc")
 
 
-@router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
-async def get_user_by_id(
-    user_id: int,
+@router.get("/{user_uuid}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
+async def get_user_by_uuid(
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
-    Get user by ID.
+    Get user by UUID.
     
     **Permission Required:** USER_VIEW_ALL
     **Roles:** admin, manager
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@router.get("/{user_id}/roles", response_model=UserWithRoles, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
+@router.get("/{user_uuid}/roles", response_model=UserWithRoles, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_user_with_roles(
-    user_id: int,
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -194,12 +236,13 @@ async def get_user_with_roles(
     **Permission Required:** USER_VIEW_ALL
     **Roles:** admin, manager
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     return await user_service.get_user_with_roles(user_id)
 
 
-@router.get("/{user_id}/status", response_model=UserAccountStatus, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
+@router.get("/{user_uuid}/status", response_model=UserAccountStatus, dependencies=[Depends(require_permission(Permission.USER_VIEW_ALL))])
 async def get_user_account_status(
-    user_id: int,
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -208,6 +251,7 @@ async def get_user_account_status(
     **Permission Required:** USER_VIEW_ALL
     **Roles:** admin, manager
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     return await user_service.get_user_account_status(user_id)
 
 
@@ -221,32 +265,46 @@ async def create_user(
     user_service: UserService = Depends(get_user_service)
 ):
     """
-    Create a new user.
+    Create a new user (admin).
     
     **Permission Required:** USER_CREATE
     **Roles:** admin only
+    
+    Admin-created users are automatically verified and active.
     """
-    return await user_service.create_user(user_data)
+    user = await user_service.create_user_by_admin(user_data)
+    
+    # Send notification email (optional, non-blocking)
+    from src.services.email import send_account_created_notification
+    await send_account_created_notification(user.email, user.nama)
+    
+    return user
 
 
-@router.put("/{user_id}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
+@router.put("/{user_uuid}", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user(
-    user_id: int,
+    user_uuid: str,
     user_data: UserUpdate,
+    current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
     Update user information.
     
     **Permission Required:** USER_UPDATE
-    **Roles:** admin only
+    **Roles:** admin only (superadmin required to edit admins)
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
+    # Cek apakah target user adalah admin — hanya superadmin yang bisa edit
+    if not _is_superadmin(current_user) and await _target_user_has_admin_role(user_service, user_id):
+        raise HTTPException(status_code=403, detail="Hanya superadmin yang bisa mengedit admin lain")
+    
     return await user_service.update_user(user_id, user_data)
 
 
-@router.put("/{user_id}/status", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
+@router.put("/{user_uuid}/status", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user_status(
-    user_id: int,
+    user_uuid: str,
     status_data: UserStatusUpdate,
     user_service: UserService = Depends(get_user_service)
 ):
@@ -256,28 +314,34 @@ async def update_user_status(
     **Permission Required:** USER_UPDATE
     **Roles:** admin only
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     return await user_service.update_user_status(user_id, status_data.is_active)
 
 
-@router.put("/{user_id}/roles", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
+@router.put("/{user_uuid}/roles", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def update_user_roles(
-    user_id: int,
+    user_uuid: str,
     role_data: UserRoleUpdate,
+    current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
     Update user roles.
     
     **Permission Required:** USER_UPDATE
-    **Roles:** admin only
+    **Roles:** admin only (superadmin required to change admin roles)
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
+    # Cek apakah target user adalah admin — hanya superadmin yang bisa ubah roles admin
+    if not _is_superadmin(current_user) and await _target_user_has_admin_role(user_service, user_id):
+        raise HTTPException(status_code=403, detail="Hanya superadmin yang bisa mengubah role admin lain")
+    
     user = await user_service.update_user_roles(user_id, role_data.role_ids)
 
-    # Pastikan user aktif dan diverifikasi
-    if not user.is_verified or not user.is_active:
+    # Pastikan user aktif jika sudah diverifikasi email
+    if user.is_verified and not user.is_active:
         update_data = UserUpdate(
             is_active=True,
-            is_verified=True,
             updated_at=datetime.utcnow()
         )
         user = await user_service.update_user(user_id, update_data)
@@ -285,9 +349,9 @@ async def update_user_roles(
     return user
 
 
-@router.post("/{user_id}/unlock", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
+@router.post("/{user_uuid}/unlock", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_UPDATE))])
 async def unlock_user_account(
-    user_id: int,
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -296,20 +360,27 @@ async def unlock_user_account(
     **Permission Required:** USER_UPDATE
     **Roles:** admin only
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     return await user_service.unlock_user_account(user_id)
 
 
-@router.delete("/{user_id}", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
+@router.delete("/{user_uuid}", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
 async def delete_user(
-    user_id: int,
+    user_uuid: str,
+    current_user: dict = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
     Delete user (soft delete).
     
     **Permission Required:** USER_DELETE
-    **Roles:** admin only
+    **Roles:** admin only (superadmin required to delete admins)
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
+    # Cek apakah target user adalah admin — hanya superadmin yang bisa hapus
+    if not _is_superadmin(current_user) and await _target_user_has_admin_role(user_service, user_id):
+        raise HTTPException(status_code=403, detail="Hanya superadmin yang bisa menghapus admin lain")
+    
     success = await user_service.delete_user(user_id)
     return {"message": "User deleted successfully"}
 
@@ -318,9 +389,9 @@ async def delete_user(
 # APPROVAL & REJECTION ENDPOINTS - Admin and Manager
 # ============================================================================
 
-@router.patch("/{user_id}/approve", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_APPROVE))])
+@router.patch("/{user_uuid}/approve", response_model=UserResponse, dependencies=[Depends(require_permission(Permission.USER_APPROVE))])
 async def approve_user(
-    user_id: int,
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -329,17 +400,23 @@ async def approve_user(
     **Permission Required:** USER_APPROVE
     **Roles:** admin, manager
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.is_active and user.is_verified:
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="User belum verifikasi email. Tidak bisa di-approve."
+        )
+
+    if user.is_active:
         raise HTTPException(status_code=400, detail="User already approved")
 
-    # ✅ STEP 1: Update status user
+    # ✅ STEP 1: Update status user (hanya set is_active, is_verified sudah True dari email)
     update_data = UserUpdate(
         is_active=True,
-        is_verified=True,
         updated_at=datetime.utcnow()
     )
     updated_user = await user_service.update_user(user_id, update_data)
@@ -374,9 +451,9 @@ async def approve_user(
     return await user_service.get_user(user_id)
 
 
-@router.patch("/{user_id}/reject", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
+@router.patch("/{user_uuid}/reject", dependencies=[Depends(require_permission(Permission.USER_DELETE))])
 async def reject_user(
-    user_id: int,
+    user_uuid: str,
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -386,13 +463,14 @@ async def reject_user(
     **Permission Required:** USER_DELETE
     **Roles:** admin only
     """
+    user_id = await _resolve_user_id(user_uuid, user_service)
     try:
         user = await user_service.get_user(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        if user.is_active or user.is_verified:
-            raise HTTPException(status_code=400, detail="User already approved")
+        if user.is_active:
+            raise HTTPException(status_code=400, detail="User already approved and active")
 
         # Hapus user secara permanen (bukan soft delete)
         await user_service.hard_delete_user(user_id)
@@ -402,5 +480,5 @@ async def reject_user(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error rejecting user {user_id}: {e}")
+        print(f"Error rejecting user {user_uuid}: {e}")
         raise HTTPException(status_code=500, detail="Failed to reject user")

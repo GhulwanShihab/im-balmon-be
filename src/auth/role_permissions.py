@@ -16,6 +16,7 @@ class Permission(str, Enum):
     USER_DELETE = "user:delete"
     USER_APPROVE = "user:approve"
     USER_STATS = "user:stats"
+    USER_MANAGE_ADMIN = "user:manage_admin"  # Superadmin only: manage other admins
     
     # ========================================================================
     # DEVICE PERMISSIONS
@@ -93,75 +94,85 @@ class Permission(str, Enum):
 # ROLE PERMISSIONS MAPPING
 # ============================================================================
 
+# Base admin permissions (shared by admin and superadmin)
+_ADMIN_PERMISSIONS: Set[Permission] = {
+    # Users
+    Permission.USER_VIEW,
+    Permission.USER_VIEW_ALL,
+    Permission.USER_CREATE,
+    Permission.USER_UPDATE,
+    Permission.USER_DELETE,
+    Permission.USER_APPROVE,
+    Permission.USER_STATS,
+    
+    # Devices
+    Permission.DEVICE_VIEW,
+    Permission.DEVICE_CREATE,
+    Permission.DEVICE_UPDATE,
+    Permission.DEVICE_DELETE,
+    Permission.DEVICE_STATS,
+    Permission.DEVICE_USAGE_STATS,
+    
+    # Device Children
+    Permission.DEVICE_CHILD_VIEW,
+    Permission.DEVICE_CHILD_CREATE,
+    Permission.DEVICE_CHILD_UPDATE,
+    Permission.DEVICE_CHILD_DELETE,
+    
+    # Device Groups
+    Permission.DEVICE_GROUP_VIEW,
+    Permission.DEVICE_GROUP_CREATE,
+    Permission.DEVICE_GROUP_UPDATE,
+    Permission.DEVICE_GROUP_DELETE,
+    Permission.DEVICE_GROUP_BORROW,
+    
+    # Loans
+    Permission.LOAN_VIEW,
+    Permission.LOAN_VIEW_ALL,
+    Permission.LOAN_CREATE,
+    Permission.LOAN_UPDATE,
+    Permission.LOAN_DELETE,
+    Permission.LOAN_RETURN,
+    Permission.LOAN_CANCEL,
+    Permission.LOAN_APPROVE,
+    Permission.LOAN_STATS,
+    Permission.LOAN_CONDITION_APPROVE,
+    
+    # Employees
+    Permission.EMPLOYEE_VIEW,
+    Permission.EMPLOYEE_CREATE,
+    Permission.EMPLOYEE_UPDATE,
+    Permission.EMPLOYEE_DELETE,
+    
+    # Locations
+    Permission.LOCATION_VIEW,
+    Permission.LOCATION_CREATE,
+    Permission.LOCATION_UPDATE,
+    Permission.LOCATION_DELETE,
+    
+    # Export
+    Permission.EXPORT_PDF,
+    Permission.EXPORT_EXCEL,
+    Permission.EXPORT_DEVICE_USAGE,
+    Permission.EXPORT_LOAN_REPORT,
+    
+    # MFA
+    Permission.MFA_MANAGE,
+    Permission.MFA_ADMIN,
+}
+
 ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
     # ========================================================================
-    # ADMIN - Full access to everything
+    # SUPERADMIN - Full access + manage other admins
     # ========================================================================
-    "admin": {
-        # Users
-        Permission.USER_VIEW,
-        Permission.USER_VIEW_ALL,
-        Permission.USER_CREATE,
-        Permission.USER_UPDATE,
-        Permission.USER_DELETE,
-        Permission.USER_APPROVE,
-        Permission.USER_STATS,
-        
-        # Devices
-        Permission.DEVICE_VIEW,
-        Permission.DEVICE_CREATE,
-        Permission.DEVICE_UPDATE,
-        Permission.DEVICE_DELETE,
-        Permission.DEVICE_STATS,
-        Permission.DEVICE_USAGE_STATS,
-        
-        # Device Children
-        Permission.DEVICE_CHILD_VIEW,
-        Permission.DEVICE_CHILD_CREATE,
-        Permission.DEVICE_CHILD_UPDATE,
-        Permission.DEVICE_CHILD_DELETE,
-        
-        # Device Groups
-        Permission.DEVICE_GROUP_VIEW,
-        Permission.DEVICE_GROUP_CREATE,
-        Permission.DEVICE_GROUP_UPDATE,
-        Permission.DEVICE_GROUP_DELETE,
-        Permission.DEVICE_GROUP_BORROW,
-        
-        # Loans
-        Permission.LOAN_VIEW,
-        Permission.LOAN_VIEW_ALL,
-        Permission.LOAN_CREATE,
-        Permission.LOAN_UPDATE,
-        Permission.LOAN_DELETE,
-        Permission.LOAN_RETURN,
-        Permission.LOAN_CANCEL,
-        Permission.LOAN_APPROVE,
-        Permission.LOAN_STATS,
-        Permission.LOAN_CONDITION_APPROVE,
-        
-        # Employees
-        Permission.EMPLOYEE_VIEW,
-        Permission.EMPLOYEE_CREATE,
-        Permission.EMPLOYEE_UPDATE,
-        Permission.EMPLOYEE_DELETE,
-        
-        # Locations
-        Permission.LOCATION_VIEW,
-        Permission.LOCATION_CREATE,
-        Permission.LOCATION_UPDATE,
-        Permission.LOCATION_DELETE,
-        
-        # Export
-        Permission.EXPORT_PDF,
-        Permission.EXPORT_EXCEL,
-        Permission.EXPORT_DEVICE_USAGE,
-        Permission.EXPORT_LOAN_REPORT,
-        
-        # MFA
-        Permission.MFA_MANAGE,
-        Permission.MFA_ADMIN,
+    "superadmin": _ADMIN_PERMISSIONS | {
+        Permission.USER_MANAGE_ADMIN,  # Can view/edit/delete other admins
     },
+    
+    # ========================================================================
+    # ADMIN - Full access except managing other admins
+    # ========================================================================
+    "admin": _ADMIN_PERMISSIONS,
     
     # ========================================================================
     # MANAGER - Read access + limited actions (NO create/update/delete)

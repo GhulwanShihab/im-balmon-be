@@ -29,6 +29,14 @@ class UserRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_uuid(self, uuid: str) -> Optional[User]:
+        """Get user by UUID."""
+        query = select(User).where(
+            and_(User.uuid == uuid, User.deleted_at.is_(None))
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def create(self, user_data: UserCreate, hashed_password: str) -> User:
         """Create a new user (requires admin approval)."""
         user = User(
@@ -301,6 +309,14 @@ class UserRepository:
     
     async def delete_user(self, user_id: int) -> bool:
         """Delete user permanently (hard delete)."""
+        # Hapus employee terkait dulu (foreign key constraint)
+        from src.models.employee import Employee
+        emp_query = select(Employee).where(Employee.user_id == user_id)
+        emp_result = await self.session.execute(emp_query)
+        employee = emp_result.scalar_one_or_none()
+        if employee:
+            await self.session.delete(employee)
+
         stmt = delete(User).where(User.id == user_id)
         result = await self.session.execute(stmt)
         await self.session.commit()
@@ -343,12 +359,12 @@ class UserRepository:
         )
         mfa_enabled_users = (await self.session.execute(mfa_query)).scalar()
 
-        # ✅ Pending users
+        # ✅ Pending users (sudah verifikasi email, belum di-approve admin)
         pending_query = select(func.count(User.id)).where(
             and_(
                 User.deleted_at.is_(None),
                 User.is_active == False,
-                User.is_verified == False
+                User.is_verified == True
             )
         )
         pending_users = (await self.session.execute(pending_query)).scalar()
@@ -431,5 +447,13 @@ class UserRepository:
 
     async def hard_delete(self, user):
         """Physically remove user from the database."""
+        # Hapus employee terkait dulu (foreign key constraint)
+        from src.models.employee import Employee
+        emp_query = select(Employee).where(Employee.user_id == user.id)
+        emp_result = await self.session.execute(emp_query)
+        employee = emp_result.scalar_one_or_none()
+        if employee:
+            await self.session.delete(employee)
+
         await self.session.delete(user)
 

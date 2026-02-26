@@ -16,7 +16,7 @@ class UserService:
         self.user_repo = user_repo
 
     async def create_user(self, user_data: UserCreate) -> UserResponse:
-        """Register new user — requires admin approval before activation."""
+        """Register new user — requires email verification + admin approval."""
         existing_user = await self.user_repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(
@@ -35,7 +35,28 @@ class UserService:
         await self.user_repo.session.commit()
         await self.user_repo.session.refresh(user)
 
-        # ✅ kembalikan response, bukan raise (karena raise memutus flow)
+        return UserResponse.model_validate(user)
+    
+    async def create_user_by_admin(self, user_data: UserCreate) -> UserResponse:
+        """Create user by admin — skip email verification, set verified and active."""
+        existing_user = await self.user_repo.get_by_email(user_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+        hashed_password = get_password_hash(user_data.password)
+        user = await self.user_repo.create(user_data, hashed_password)
+
+        # Admin-created users are automatically verified and active
+        user.is_active = True
+        user.is_verified = True
+        user.password_changed_at = datetime.utcnow()
+        user.password_history = [hashed_password]
+        await self.user_repo.session.commit()
+        await self.user_repo.session.refresh(user)
+
         return UserResponse.model_validate(user)
 
 
@@ -45,11 +66,18 @@ class UserService:
         if not user:
             return None
         
-        # Hanya user aktif & diverifikasi yang boleh login
-        if not user.is_active or not user.is_verified:
+        # Check email verification first
+        if not user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your account is not yet approved by admin."
+                detail="Email belum diverifikasi. Silakan cek email Anda untuk link verifikasi."
+            )
+        
+        # Then check admin approval
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Akun Anda belum diapprove oleh admin. Silakan tunggu."
             )
 
         if user.is_locked():
@@ -294,6 +322,15 @@ class UserService:
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             return False
+
+        # Hapus employee terkait dulu (foreign key constraint)
+        from src.models.employee import Employee
+        from sqlalchemy import select
+        emp_query = select(Employee).where(Employee.user_id == user_id)
+        emp_result = await self.user_repo.session.execute(emp_query)
+        employee = emp_result.scalar_one_or_none()
+        if employee:
+            await self.user_repo.session.delete(employee)
 
         await self.user_repo.session.delete(user)
         await self.user_repo.session.commit()

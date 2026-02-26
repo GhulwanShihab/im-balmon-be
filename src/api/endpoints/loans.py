@@ -355,7 +355,7 @@ async def update_loan(
     
     # Check if user can update this loan
     user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    if "admin" not in user_roles and "superadmin" not in user_roles and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -387,7 +387,7 @@ async def return_loan(
 
     # Check if user can return this loan
     user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    if "admin" not in user_roles and "superadmin" not in user_roles and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     return await loan_service.return_loan(loan_id, return_data, current_user["id"])
@@ -545,7 +545,7 @@ async def generate_loan_pdf(
     
     # Check access permission
     user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and loan.borrower_user_id != current_user["id"]:
+    if "admin" not in user_roles and "superadmin" not in user_roles and loan.borrower_user_id != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -617,7 +617,7 @@ async def upload_condition_evidence(
     
     # Check permission: owner or admin
     user_roles = current_user.get("roles", [])
-    if "admin" not in user_roles and change_req.requested_by_user_id != current_user["id"]:
+    if "admin" not in user_roles and "superadmin" not in user_roles and change_req.requested_by_user_id != current_user["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
     # Validate file type

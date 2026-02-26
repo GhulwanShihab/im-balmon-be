@@ -114,6 +114,16 @@ class Settings(BaseSettings):
     SESSION_EXPIRE_MINUTES: int = 1440  # 24 hours
     SESSION_CLEANUP_INTERVAL_HOURS: int = 24
 
+    # Email SMTP Settings
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_NAME: str = "IM-Balmon System"
+    
+    # Frontend URL (for email verification links)
+    FRONTEND_URL: str = "http://localhost:5173"
+
     @field_validator("DATABASE_URI", mode="before")
     def assemble_db_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
         """Build PostgreSQL connection string from components."""

@@ -1,6 +1,6 @@
 """Authentication endpoints with password security features and session management."""
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -8,6 +8,11 @@ from src.core.database import get_db
 from src.repositories.user import UserRepository
 from src.services.user import UserService
 from src.services.auth import AuthService
+from src.services.email import (
+    create_email_verification_token,
+    verify_email_token,
+    send_verification_email,
+)
 from src.schemas.user import (
     UserLogin, UserCreate, UserResponse, Token, PasswordChange,
     PasswordReset, PasswordResetConfirm, PasswordStrengthCheck, PasswordStrengthResponse
@@ -37,18 +42,27 @@ async def get_user_service(session: AsyncSession = Depends(get_db)) -> UserServi
 # PUBLIC ENDPOINTS - No authentication required
 # ============================================================================
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=SuccessResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
-    Register a new user with password validation.
+    Register a new user with password validation and email verification.
     
     **Permission Required:** None (Public endpoint)
     **Roles:** None
     """
-    return await auth_service.user_service.create_user(user_data)
+    user = await auth_service.user_service.create_user(user_data)
+    
+    # Generate verification token and send email
+    token = create_email_verification_token(user.id)
+    await send_verification_email(user.email, user.nama, token)
+    
+    return SuccessResponse(
+        success=True,
+        message="Registrasi berhasil! Silakan cek email Anda untuk verifikasi."
+    )
 
 
 @router.post("/login", response_model=Token)
@@ -66,6 +80,57 @@ async def login(
     return await auth_service.login(login_data, request)
 
 
+@router.get("/verify-email", response_model=SuccessResponse)
+async def verify_email(
+    token: str = Query(..., description="Email verification token"),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Verify user email with token from verification link.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
+    user_id = verify_email_token(token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Link verifikasi tidak valid atau sudah kedaluwarsa."
+        )
+    
+    from src.schemas.user import UserUpdate
+    await user_service.update_user(user_id, UserUpdate(is_verified=True))
+    
+    return SuccessResponse(
+        success=True,
+        message="Email berhasil diverifikasi! Silakan tunggu persetujuan admin untuk mengaktifkan akun Anda."
+    )
+
+
+@router.post("/resend-verification", response_model=SuccessResponse)
+async def resend_verification(
+    email_data: PasswordReset,  # reuse schema (just needs email field)
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Resend email verification link.
+    
+    **Permission Required:** None (Public endpoint)
+    **Roles:** None
+    """
+    user = await user_service.user_repo.get_by_email(email_data.email)
+    
+    if user and not user.is_verified:
+        token = create_email_verification_token(user.id)
+        await send_verification_email(user.email, user.nama, token)
+    
+    # Always return success to prevent email enumeration
+    return SuccessResponse(
+        success=True,
+        message="Jika email terdaftar, link verifikasi telah dikirim ulang."
+    )
+
+
 @router.post("/request-password-reset", response_model=SuccessResponse)
 async def request_password_reset(
     reset_data: PasswordReset,
@@ -80,8 +145,7 @@ async def request_password_reset(
     result = await auth_service.request_password_reset(reset_data)
     return SuccessResponse(
         success=True,
-        message=result["message"],
-        data={"token": result.get("token")}  # Remove in production
+        message=result["message"]
     )
 
 
