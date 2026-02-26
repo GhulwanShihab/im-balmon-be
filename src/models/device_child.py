@@ -1,7 +1,7 @@
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship, Column, JSON, ForeignKey
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum, UniqueConstraint
 from enum import Enum
 
 from .perangkat import DeviceStatus
@@ -11,6 +11,9 @@ if TYPE_CHECKING:
 
 class DeviceChild(SQLModel, table=True):
     __tablename__ = "device_children"
+    __table_args__ = (
+        UniqueConstraint("device_code", "nup_device", name="uq_child_device_code_nup"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     parent_id: int = Field(sa_column=Column(ForeignKey("devices.id", ondelete="CASCADE"), index=True))

@@ -46,6 +46,12 @@ class DeviceRepository:
         print("❌ [DeviceRepo] tidak ditemukan di devices maupun device_children")
         return None
 
+    async def get_by_all_code(self, all_code: str) -> Optional[Device]:
+        """Get device by all_code."""
+        query = select(Device).where(Device.all_code == all_code)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_code(self, device_code: str) -> Optional[Device]:
         """Get device by code."""
         query = select(Device).where(Device.device_code == device_code)
@@ -60,9 +66,11 @@ class DeviceRepository:
 
     async def create(self, device_data: DeviceCreate) -> Device:
         """Create a new device."""
+        all_code = f"{device_data.device_code}{device_data.nup_device or ''}"
         device = Device(
             device_name=device_data.device_name,
             device_code=device_data.device_code,
+            all_code=all_code,
             nup_device=device_data.nup_device,
             bmn_brand=device_data.bmn_brand,
             sample_brand=device_data.sample_brand,
@@ -113,6 +121,9 @@ class DeviceRepository:
                 continue
 
             setattr(device, key, value)
+            
+        # Recompute all_code automatically on updates
+        device.all_code = f"{device.device_code}{device.nup_device or ''}"
 
         device.updated_at = datetime.utcnow()
         await self.session.commit()

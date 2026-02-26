@@ -48,6 +48,7 @@ class DeviceUpdate(BaseModel):
 
 class DeviceResponse(DeviceBase):
     id: int
+    all_code: str
     created_at: datetime
     updated_at: datetime
     children: Optional[List[DeviceChildResponse]] = Field(default_factory=list)

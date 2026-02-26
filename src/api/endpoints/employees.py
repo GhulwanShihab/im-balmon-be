@@ -25,14 +25,17 @@ async def get_employee_service(session: AsyncSession = Depends(get_db)) -> Emplo
 
 @router.get("/", response_model=List[EmployeeResponse], dependencies=[Depends(require_permission(Permission.EMPLOYEE_VIEW))])
 async def list_employees(
+    pihak_1_only: bool = False,
     service: EmployeeService = Depends(get_employee_service)
 ):
     """
-    Get all employees.
+    Get all employees, or only pihak_1 candidates.
     
     **Permission Required:** EMPLOYEE_VIEW
     **Roles:** admin, manager, user
     """
+    if pihak_1_only:
+        return await service.get_pihak_1_candidates()
     return await service.get_employees()
 
 

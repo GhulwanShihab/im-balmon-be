@@ -18,8 +18,18 @@ class EmployeeRepository:
         result = await self.session.execute(select(Employee))
         return result.scalars().all()
 
+    async def get_pihak_1_candidates(self) -> List[Employee]:
+        result = await self.session.execute(
+            select(Employee).where(Employee.is_pihak_1 == True)
+        )
+        return result.scalars().all()
+
     async def get_by_id(self, employee_id: int) -> Optional[Employee]:
         result = await self.session.execute(select(Employee).where(Employee.id == employee_id))
+        return result.scalar_one_or_none()
+
+    async def get_by_name(self, nama: str) -> Optional[Employee]:
+        result = await self.session.execute(select(Employee).where(Employee.nama == nama))
         return result.scalar_one_or_none()
 
     async def update(self, employee: Employee, data: dict) -> Employee:

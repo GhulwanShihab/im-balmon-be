@@ -23,12 +23,13 @@ class DeviceService:
 
     async def create_device(self, device_data: DeviceCreate) -> DeviceResponse:
         """Create a new device with validation."""
-        # Check if device code already exists
-        existing_device = await self.device_repo.get_by_code(device_data.device_code)
+        # Check if all_code already exists
+        all_code = f"{device_data.device_code}{device_data.nup_device or ''}"
+        existing_device = await self.device_repo.get_by_all_code(all_code)
         if existing_device:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Device code already exists"
+                detail="Device with this Code and NUP already exists"
             )
         
         # Check if NUP already exists (only if provided)
@@ -97,13 +98,18 @@ class DeviceService:
                 detail="Device not found"
             )
         
-        # Check if device code is being updated and already exists
-        if device_data.device_code and device_data.device_code != existing_device.device_code:
-            existing_code = await self.device_repo.get_by_code(device_data.device_code)
-            if existing_code:
+        # Construct new all_code to check for conflicts
+        new_device_code = device_data.device_code if device_data.device_code is not None else existing_device.device_code
+        new_nup_device = device_data.nup_device if device_data.nup_device is not None else existing_device.nup_device
+        
+        new_all_code = f"{new_device_code}{new_nup_device or ''}"
+        
+        if new_all_code != existing_device.all_code:
+            existing_all_code = await self.device_repo.get_by_all_code(new_all_code)
+            if existing_all_code:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Device code already exists"
+                    detail="Device with this Code and NUP already exists"
                 )
         
         #if device_data.nup_device and device_data.nup_device != existing_device.nup_device:

@@ -10,9 +10,10 @@ class Employee(BaseModel, SQLModel, table=True):
     __tablename__ = "employees"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    nama: str = Field(index=True, max_length=255)
-    nip: Optional[str] = Field(default=None, index=True, max_length=50, nullable=True)
+    nama: str = Field(unique=True, index=True, max_length=255)
+    nip: Optional[str] = Field(default=None, unique=True, index=True, max_length=50, nullable=True)
     jabatan: str = Field(max_length=255, default="Pegawai")
+    is_pihak_1: bool = Field(default=False)
     user_id: Optional[int] = Field(default=None, foreign_key="users.id", unique=True, nullable=True)
 
 

@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship, Column, JSON
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum, UniqueConstraint
 from enum import Enum
 
 class DeviceStatus(str, Enum):
@@ -16,6 +16,7 @@ class Device(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     device_name: str = Field(index=True)
     device_code: str = Field(index=True)
+    all_code: str = Field(unique=True, index=True)
 
     nup_device: Optional[str] = None
     bmn_brand: Optional[str] = None

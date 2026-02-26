@@ -26,7 +26,7 @@ class User(BaseModel, SQLModel, table=True):
     is_verified: bool = Field(default=False)
     
     # Registration fields for employee sync
-    nip: Optional[str] = Field(default=None, max_length=50, nullable=True)
+    nip: Optional[str] = Field(default=None, unique=True, max_length=50, nullable=True)
     jabatan: Optional[str] = Field(default=None, max_length=255, nullable=True)
 
     
