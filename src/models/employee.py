@@ -1,5 +1,6 @@
 from typing import Optional, List
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import ForeignKey
 from datetime import datetime
 
 from .base import BaseModel
@@ -14,7 +15,7 @@ class Employee(BaseModel, SQLModel, table=True):
     nip: Optional[str] = Field(default=None, unique=True, index=True, max_length=50, nullable=True)
     jabatan: str = Field(max_length=255, default="Pegawai")
     is_pihak_1: bool = Field(default=False)
-    user_id: Optional[int] = Field(default=None, foreign_key="users.id", unique=True, nullable=True)
+    user_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("users.id", ondelete="SET NULL"), unique=True, nullable=True))
 
 
     loans_as_pihak_1: List["DeviceLoan"] = Relationship(

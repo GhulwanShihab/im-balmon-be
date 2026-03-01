@@ -21,7 +21,7 @@ class DeviceGroup(SQLModel, table=True):
     description: Optional[str] = Field(None, description="Group description")
     
     # Owner
-    user_id: int = Field(foreign_key="users.id", description="User who created this group")
+    user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")), description="User who created this group")
     
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -47,7 +47,7 @@ class DeviceGroupItem(SQLModel, table=True):
     __tablename__ = "device_group_items"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    group_id: int = Field(foreign_key="device_groups.id", description="Device group ID")
+    group_id: int = Field(sa_column=Column(ForeignKey("device_groups.id", ondelete="CASCADE")), description="Device group ID")
     
     # Device reference (either parent device OR child device)
     device_id: Optional[int] = Field(

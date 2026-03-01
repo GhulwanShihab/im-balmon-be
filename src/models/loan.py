@@ -43,8 +43,8 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
     loan_number: str = Field(unique=True, index=True, description="Auto-generated loan number (BA-YYYY-MM-XXX)")
 
     # Foreign key fields
-    pihak_1_id: Optional[int] = Field(default=None, foreign_key="employees.id")
-    pihak_2_id: Optional[int] = Field(default=None, foreign_key="employees.id")
+    pihak_1_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("employees.id", ondelete="SET NULL")))
+    pihak_2_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("employees.id", ondelete="SET NULL")))
 
     # ✅ Relationships - USE STRING ANNOTATIONS
     pihak_1: Optional["Employee"] = Relationship(  # ← String
@@ -68,7 +68,7 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
 
     # Borrower information
     borrower_name: str = Field(description="Nama pengguna")
-    borrower_user_id: int = Field(foreign_key="users.id", description="ID user peminjam")
+    borrower_user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")), description="ID user peminjam")
 
     # Activity details
     activity_name: str = Field(description="Nama kegiatan")
@@ -82,7 +82,7 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
 
     # Return information
     return_notes: Optional[str] = Field(None, description="Catatan pengembalian")
-    returned_by_user_id: Optional[int] = Field(None, foreign_key="users.id", description="User yang mengembalikan")
+    returned_by_user_id: Optional[int] = Field(None, sa_column=Column(ForeignKey("users.id", ondelete="SET NULL")), description="User yang mengembalikan")
 
     # ✅ Relationships to User and others - STRING ANNOTATIONS
     borrower: Optional["User"] = Relationship(
@@ -107,17 +107,17 @@ class DeviceLoanItem(BaseModel, SQLModel, table=True):
     __tablename__ = "device_loan_items"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    loan_id: int = Field(foreign_key="device_loans.id", description="ID peminjaman")
+    loan_id: int = Field(sa_column=Column(ForeignKey("device_loans.id", ondelete="CASCADE")), description="ID peminjaman")
 
     device_id: Optional[int] = Field(
         default=None,
-        sa_column=Column(ForeignKey("devices.id"), nullable=True),
+        sa_column=Column(ForeignKey("devices.id", ondelete="SET NULL"), nullable=True),
         description="ID perangkat parent"
     )
 
     child_device_id: Optional[int] = Field(
         default=None,
-        sa_column=Column(ForeignKey("device_children.id"), nullable=True),
+        sa_column=Column(ForeignKey("device_children.id", ondelete="SET NULL"), nullable=True),
         description="ID perangkat child jika yang dipinjam child"
     )
 
@@ -153,7 +153,7 @@ class LoanHistory(BaseModel, SQLModel, table=True):
     __tablename__ = "loan_history"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    loan_id: int = Field(foreign_key="device_loans.id", description="ID peminjaman")
+    loan_id: int = Field(sa_column=Column(ForeignKey("device_loans.id", ondelete="CASCADE")), description="ID peminjaman")
     
     # Status change information
     old_status: Optional[str] = Field(None, max_length=20)
@@ -164,7 +164,7 @@ class LoanHistory(BaseModel, SQLModel, table=True):
     # ✅ PERBAIKAN: Allow NULL untuk system updates
     changed_by_user_id: Optional[int] = Field(
         default=None, 
-        foreign_key="users.id", 
+        sa_column=Column(ForeignKey("users.id", ondelete="SET NULL")), 
         description="User yang mengubah (NULL untuk system)"
     )
     
@@ -182,10 +182,10 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     __tablename__ = "device_condition_change_requests"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    loan_item_id: int = Field(foreign_key="device_loan_items.id", description="Item peminjaman terkait")
-    device_id: Optional[int] = Field(default=None, foreign_key="devices.id")
-    child_device_id: Optional[int] = Field(foreign_key="device_children.id", default=None)
-    requested_by_user_id: int = Field(foreign_key="users.id", description="User yang meminta perubahan")
+    loan_item_id: int = Field(sa_column=Column(ForeignKey("device_loan_items.id", ondelete="CASCADE")), description="Item peminjaman terkait")
+    device_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("devices.id", ondelete="CASCADE")))
+    child_device_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("device_children.id", ondelete="CASCADE")))
+    requested_by_user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")), description="User yang meminta perubahan")
 
     old_condition: Optional[str] = Field(default=None, max_length=50)
     new_condition: Optional[str] = Field(default=None, max_length=50)
@@ -196,7 +196,7 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
 
     requested_at: datetime = Field(default_factory=datetime.utcnow)
     reviewed_at: Optional[datetime] = None
-    reviewed_by_admin_id: Optional[int] = Field(None, foreign_key="users.id")
+    reviewed_by_admin_id: Optional[int] = Field(None, sa_column=Column(ForeignKey("users.id", ondelete="SET NULL")))
 
     # ✅ STRING ANNOTATIONS
     loan_item: Optional["DeviceLoanItem"] = Relationship(

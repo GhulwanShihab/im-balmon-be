@@ -3,7 +3,7 @@
 import uuid as uuid_lib
 from typing import Optional, List
 from datetime import datetime, timedelta
-from sqlmodel import Field, SQLModel, Relationship, Column, JSON
+from sqlmodel import Field, SQLModel, Relationship, Column, JSON, ForeignKey
 
 from .base import BaseModel
 
@@ -122,8 +122,8 @@ class UserRole(BaseModel, SQLModel, table=True):
     __tablename__ = "user_roles"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
-    role_id: int = Field(foreign_key="roles.id")
+    user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")))
+    role_id: int = Field(sa_column=Column(ForeignKey("roles.id", ondelete="CASCADE")))
     
     # Relationships
     user: User = Relationship(back_populates="roles")
@@ -136,7 +136,7 @@ class PasswordResetToken(BaseModel, SQLModel, table=True):
     __tablename__ = "password_reset_tokens"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
+    user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")))
     token: str = Field(unique=True, index=True)
     expires_at: datetime
     used: bool = Field(default=False)
@@ -152,7 +152,7 @@ class MFABackupCode(BaseModel, SQLModel, table=True):
     __tablename__ = "mfa_backup_codes"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id")
+    user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")))
     code: str = Field(index=True)
     used: bool = Field(default=False)
     used_at: Optional[datetime] = Field(default=None)
