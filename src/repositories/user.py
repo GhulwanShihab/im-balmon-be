@@ -51,9 +51,20 @@ class UserRepository:
             password_history=[hashed_password],
         )
         self.session.add(user)
-        await self.session.commit()
-        await self.session.refresh(user)
-        return user
+        
+        from sqlalchemy.exc import IntegrityError
+        from fastapi import HTTPException
+        
+        try:
+            await self.session.commit()
+            await self.session.refresh(user)
+            return user
+        except IntegrityError as e:
+            await self.session.rollback()
+            error_msg = str(e).lower()
+            if "nip" in error_msg:
+                raise HTTPException(status_code=400, detail="NIP sudah terdaftar oleh pengguna lain.")
+            raise HTTPException(status_code=400, detail="Data sudah ada atau tidak valid.")
 
     async def update(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
         """Update user."""

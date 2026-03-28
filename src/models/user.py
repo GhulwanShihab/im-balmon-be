@@ -62,8 +62,8 @@ class User(BaseModel, SQLModel, table=True):
     
     def lock_account(self) -> None:
         """Lock account with progressive duration based on failed attempts."""
-        # Progressive lockout: 5min, 15min, 1hour, 24hour
-        lockout_durations = [5, 15, 60, 1440]  # minutes
+        # Progressive lockout: 1min, 5min, 15min, 60min
+        lockout_durations = [1, 5, 15, 60]  # minutes
         
         if self.failed_login_attempts >= len(lockout_durations):
             # Maximum lockout (24 hours)

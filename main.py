@@ -63,7 +63,13 @@ def create_application() -> FastAPI:
         redoc_url="/redoc" if settings.DEBUG else None,
     )
 
-    # CORS middleware
+    # Add error handlers (Inner-most middleware added early)
+    add_error_handlers(app)
+
+    # Add rate limiting middleware
+    add_rate_limiting(app)
+
+    # CORS middleware (Outer-most middleware added late so it wraps everything else)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS_LIST,
@@ -71,12 +77,6 @@ def create_application() -> FastAPI:
         allow_methods=settings.CORS_METHODS_LIST,
         allow_headers=settings.CORS_HEADERS_LIST,
     )
-
-    # Add rate limiting middleware
-    add_rate_limiting(app)
-
-    # Add error handlers
-    add_error_handlers(app)
 
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_STR)

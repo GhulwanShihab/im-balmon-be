@@ -1,6 +1,7 @@
 """Location repository for database operations."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from sqlmodel import select
 from typing import List, Optional
 from src.models.location import Location
@@ -10,6 +11,16 @@ from src.models.perangkat import Device
 class LocationRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def get_by_name_and_type(self, name: str, location_type: str) -> Optional[Location]:
+        """Case-insensitive search for location by name and type."""
+        result = await self.session.execute(
+            select(Location).where(
+                func.lower(Location.name) == name.lower(),
+                func.lower(Location.type) == location_type.lower()
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def create(self, location: Location) -> Location:
         self.session.add(location)
