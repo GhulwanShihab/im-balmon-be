@@ -41,33 +41,33 @@ class TestUserModel:
 
     def test_lock_account(self, mock_user):
         """Test lock_account sets correct lockout duration."""
-        mock_user.failed_login_attempts = 1  # Index 0 = 5 minutes
+        mock_user.failed_login_attempts = 1  # Index 0 = 1 minute
         mock_user.lock_account()
         
         assert mock_user.locked_until is not None
-        assert mock_user.lockout_duration_minutes == 5  # First lockout = 5 minutes
+        assert mock_user.lockout_duration_minutes == 1  # First lockout = 1 minute
 
     def test_progressive_lockout(self, mock_user):
         """Test progressive lockout increases duration."""
-        # First lockout (5 minutes) - index 0
+        # First lockout (1 minute) - index 0
         mock_user.failed_login_attempts = 1
+        mock_user.lock_account()
+        assert mock_user.lockout_duration_minutes == 1
+
+        # Second lockout (5 minutes) - index 1
+        mock_user.failed_login_attempts = 2
         mock_user.lock_account()
         assert mock_user.lockout_duration_minutes == 5
 
-        # Second lockout (15 minutes) - index 1
-        mock_user.failed_login_attempts = 2
+        # Third lockout (15 minutes) - index 2
+        mock_user.failed_login_attempts = 3
         mock_user.lock_account()
         assert mock_user.lockout_duration_minutes == 15
 
-        # Third lockout (60 minutes) - index 2
-        mock_user.failed_login_attempts = 3
-        mock_user.lock_account()
-        assert mock_user.lockout_duration_minutes == 60
-
-        # Fourth+ lockout (24 hours) - index 3 or more
+        # Fourth+ lockout (60 minutes) - index 3 or more
         mock_user.failed_login_attempts = 4
         mock_user.lock_account()
-        assert mock_user.lockout_duration_minutes == 1440  # 24 hours
+        assert mock_user.lockout_duration_minutes == 60
 
     def test_unlock_account(self, mock_user):
         """Test unlock_account resets all lock-related fields."""

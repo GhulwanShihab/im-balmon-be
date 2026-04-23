@@ -58,15 +58,20 @@ class User(BaseModel, SQLModel, table=True):
         """Check if account is currently locked."""
         if not self.locked_until:
             return False
-        return datetime.utcnow() < self.locked_until
+        if datetime.utcnow() < self.locked_until:
+            return True
+        # Lockout expired — auto-reset so user doesn't stay at max tier
+        self.locked_until = None
+        self.lockout_duration_minutes = 0
+        self.failed_login_attempts = 0
+        return False
     
     def lock_account(self) -> None:
         """Lock account with progressive duration based on failed attempts."""
-        # Progressive lockout: 1min, 5min, 15min, 60min
-        lockout_durations = [1, 5, 15, 60]  # minutes
+        # Progressive lockout: 1min, 2min, 3min, 5min (max)
+        lockout_durations = [1, 2, 3, 5]  # minutes
         
         if self.failed_login_attempts >= len(lockout_durations):
-            # Maximum lockout (24 hours)
             duration = lockout_durations[-1]
         else:
             duration = lockout_durations[self.failed_login_attempts - 1]

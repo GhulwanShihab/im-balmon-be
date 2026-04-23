@@ -83,7 +83,7 @@ class UserService:
         if user.is_locked():
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail="Account is temporarily locked due to too many failed login attempts"
+                detail="Akun Anda terkunci sementara karena terlalu banyak percobaan login yang gagal."
             )
         
         if not verify_password(password, user.hashed_password):
@@ -91,7 +91,7 @@ class UserService:
             if updated_user and updated_user.is_locked():
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
-                    detail=f"Account locked due to too many failed login attempts. Try again in {updated_user.lockout_duration_minutes} minutes."
+                    detail=f"Akun terkunci karena terlalu banyak percobaan login yang gagal. Coba lagi dalam {updated_user.lockout_duration_minutes} menit."
                 )
             return None
         
