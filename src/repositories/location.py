@@ -54,14 +54,38 @@ class LocationRepository:
         await self.session.delete(location)
         await self.session.commit()
 
-    async def get_devices_for_location(self, location: Location) -> List[Device]:
+    async def get_devices_for_location(self, location: Location) -> List[dict]:
         """Get devices that are in this station or room."""
+        from src.models.device_child import DeviceChild
+        
         if location.type == "STASIUN":
-            result = await self.session.execute(
+            devices_result = await self.session.execute(
                 select(Device).where(Device.device_station == location.name)
             )
+            children_result = await self.session.execute(
+                select(DeviceChild).where(DeviceChild.device_station == location.name)
+            )
         else:
-            result = await self.session.execute(
+            devices_result = await self.session.execute(
                 select(Device).where(Device.device_room == location.name)
             )
-        return result.scalars().all()
+            children_result = await self.session.execute(
+                select(DeviceChild).where(DeviceChild.device_room == location.name)
+            )
+            
+        devices = devices_result.scalars().all()
+        children = children_result.scalars().all()
+        
+        # Convert to dict and add is_child flag
+        combined = []
+        for dev in devices:
+            d = dev.model_dump()
+            d["is_child"] = False
+            combined.append(d)
+            
+        for child in children:
+            c = child.model_dump()
+            c["is_child"] = True
+            combined.append(c)
+            
+        return combined

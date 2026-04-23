@@ -71,7 +71,7 @@ class LocationService:
         await self.repo.delete(location)
         return True
 
-    async def get_devices_for_location(self, location_id: int) -> List[Device]:
+    async def get_devices_for_location(self, location_id: int) -> List[dict]:
         location = await self.repo.get_by_id(location_id)
         if not location:
             return []

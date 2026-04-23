@@ -16,7 +16,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    
     @field_validator('password')
     @classmethod
     def validate_password(cls, password: str) -> str:

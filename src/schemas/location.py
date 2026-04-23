@@ -40,6 +40,7 @@ class DeviceInLocation(BaseModel):
     device_code: Optional[str] = None
     device_condition: Optional[str] = None
     device_status: Optional[str] = None
+    is_child: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 
