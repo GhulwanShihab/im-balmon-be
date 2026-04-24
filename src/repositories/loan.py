@@ -73,8 +73,7 @@ class LoanRepository:
         count_query = select(func.count(DeviceLoan.id)).where(
             and_(
                 DeviceLoan.created_at >= month_start,
-                DeviceLoan.created_at < month_end,
-                DeviceLoan.deleted_at.is_(None)
+                DeviceLoan.created_at < month_end
             )
         )
         result = await self.session.execute(count_query)
