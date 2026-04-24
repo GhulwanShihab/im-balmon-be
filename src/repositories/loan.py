@@ -63,23 +63,27 @@ class LoanRepository:
         year = now.year
         month = now.month
         
-        # Get the count of loans created this month
-        month_start = datetime(year, month, 1)
-        if month == 12:
-            month_end = datetime(year + 1, 1, 1)
+        prefix = f"BA-{year}-{month:02d}-"
+        
+        # Cari loan_number terakhir di bulan ini (termasuk yang soft-delete)
+        query = select(DeviceLoan.loan_number).where(
+            DeviceLoan.loan_number.like(f"{prefix}%")
+        ).order_by(DeviceLoan.loan_number.desc())
+        
+        result = await self.session.execute(query)
+        last_loan_number = result.scalars().first()
+        
+        if last_loan_number:
+            try:
+                # Ambil 3 digit terakhir dan tambah 1
+                last_seq = int(last_loan_number.split("-")[-1])
+                count = last_seq + 1
+            except (ValueError, IndexError):
+                count = 1
         else:
-            month_end = datetime(year, month + 1, 1)
-        
-        count_query = select(func.count(DeviceLoan.id)).where(
-            and_(
-                DeviceLoan.created_at >= month_start,
-                DeviceLoan.created_at < month_end
-            )
-        )
-        result = await self.session.execute(count_query)
-        count = result.scalar() + 1
-        
-        return f"BA-{year}-{month:02d}-{count:03d}"
+            count = 1
+            
+        return f"{prefix}{count:03d}"
 
     async def create(self, loan_data: DeviceLoanCreate, borrower_user_id: int) -> DeviceLoan:
         """Create a new device loan - supports both parent and child devices."""
