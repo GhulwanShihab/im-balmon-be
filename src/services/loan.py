@@ -75,6 +75,7 @@ class LoanService:
                     )
 
             else:
+                print("❌ [LoanService] Error: Either device_id or child_device_id must be provided")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Either device_id or child_device_id must be provided"
@@ -88,6 +89,7 @@ class LoanService:
                 device_status_upper = device_status.value.upper() if hasattr(device_status, 'value') else str(device_status).upper()
 
             if device_status_upper != "TERSEDIA":
+                print(f"❌ [LoanService] Error: Perangkat '{device.device_name}' sedang {device_status_upper.lower()}.")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Perangkat '{device.device_name}' sedang {device_status_upper.lower()}."
@@ -112,10 +114,12 @@ class LoanService:
                 is_available = await self.loan_repo.check_device_availability(
                     device_id=item.child_device_id,  # Use child_device_id
                     start_date=loan_data.loan_start_date,
-                    end_date=loan_end_date
+                    end_date=loan_end_date,
+                    is_child=True
                 )
 
             if not is_available:
+                print(f"❌ [LoanService] Error: Device '{device.device_name}' is not available for the requested period")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Device '{device.device_name}' is not available for the requested period"
@@ -126,6 +130,7 @@ class LoanService:
             loan_data.assignment_letter_number
         )
         if existing_loan:
+            print("❌ [LoanService] Error: Assignment letter number already exists")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assignment letter number already exists"
@@ -487,9 +492,9 @@ class LoanService:
         return [LoanHistoryResponse.model_validate(record) for record in history]
 
     async def check_device_availability(self, device_id: int, start_date: date, 
-                                      end_date: date, exclude_loan_id: Optional[int] = None) -> bool:
+                                      end_date: date, exclude_loan_id: Optional[int] = None, is_child: bool = False) -> bool:
         """Check if a device is available for a given period."""
-        return await self.loan_repo.check_device_availability(device_id, start_date, end_date, exclude_loan_id)
+        return await self.loan_repo.check_device_availability(device_id, start_date, end_date, exclude_loan_id, is_child)
 
     async def get_loans_summary_for_export(self, filters: DeviceLoanFilter) -> List[DeviceLoanSummary]:
         """Get loan summaries for export purposes."""

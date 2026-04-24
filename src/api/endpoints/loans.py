@@ -307,6 +307,7 @@ async def check_device_availability(
     start_date: date = Query(..., description="Loan start date"),
     end_date: date = Query(..., description="Loan end date"),
     exclude_loan_id: Optional[int] = Query(None, description="Exclude this loan ID from check"),
+    is_child: bool = Query(False, description="Whether the device is a child device"),
     current_user: dict = Depends(get_current_active_user),
     loan_service: LoanService = Depends(get_loan_service)
 ):
@@ -317,7 +318,7 @@ async def check_device_availability(
     **Roles:** admin, user
     """
     is_available = await loan_service.check_device_availability(
-        device_id, start_date, end_date, exclude_loan_id
+        device_id, start_date, end_date, exclude_loan_id, is_child
     )
     
     return {

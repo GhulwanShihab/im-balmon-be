@@ -312,10 +312,26 @@ class LoanRepository:
                         if all_children:
                             all_available = all(c.device_status == "TERSEDIA" for c in all_children)
                             if all_available:
-                                parent.device_status = "TERSEDIA"
-                                parent.updated_at = datetime.utcnow()
-                                self.session.add(parent)
-                                print(f"✅ All children available, returned parent: {parent.device_name}")
+                                # Check if parent ITSELF is currently borrowed in any active loan
+                                parent_active_loan = await self.session.execute(
+                                    select(DeviceLoanItem.id)
+                                    .join(DeviceLoan)
+                                    .where(
+                                        and_(
+                                            DeviceLoanItem.device_id == parent.id,
+                                            DeviceLoanItem.child_device_id.is_(None),
+                                            DeviceLoan.status.in_([LoanStatus.ACTIVE, LoanStatus.OVERDUE]),
+                                            DeviceLoan.deleted_at.is_(None)
+                                        )
+                                    )
+                                )
+                                if parent_active_loan.first() is None:
+                                    parent.device_status = "TERSEDIA"
+                                    parent.updated_at = datetime.utcnow()
+                                    self.session.add(parent)
+                                    print(f"✅ All children available and parent not borrowed, returned parent: {parent.device_name}")
+                                else:
+                                    print(f"⚠️ All children available but parent {parent.device_name} is still actively borrowed.")
             
             # Case 2: Jika loan_item ini untuk parent device langsung (tanpa child)
             elif loan_item.device_id:
@@ -378,11 +394,58 @@ class LoanRepository:
 
         # Ubah status perangkat ke TERSEDIA
         for item in loan.loan_items:
-            device = await self.session.get(Device, item.device_id)
-            if device:
-                device.device_status = "TERSEDIA"
-                device.updated_at = datetime.utcnow()
-                self.session.add(device)
+            if item.child_device_id:
+                child = await self.session.get(DeviceChild, item.child_device_id)
+                if child:
+                    child.device_status = "TERSEDIA"
+                    child.updated_at = datetime.utcnow()
+                    self.session.add(child)
+                    
+                    # Check parent
+                    parent = await self.session.get(Device, child.parent_id)
+                    if parent:
+                        result = await self.session.execute(
+                            select(DeviceChild).where(DeviceChild.parent_id == parent.id)
+                        )
+                        all_children = result.scalars().all()
+                        if all_children and all(c.device_status == "TERSEDIA" for c in all_children):
+                            parent_active_loan = await self.session.execute(
+                                select(DeviceLoanItem.id)
+                                .join(DeviceLoan)
+                                .where(
+                                    and_(
+                                        DeviceLoanItem.device_id == parent.id,
+                                        DeviceLoanItem.child_device_id.is_(None),
+                                        DeviceLoan.status.in_([LoanStatus.ACTIVE, LoanStatus.OVERDUE]),
+                                        DeviceLoan.deleted_at.is_(None)
+                                    )
+                                )
+                            )
+                            if parent_active_loan.first() is None:
+                                parent.device_status = "TERSEDIA"
+                                parent.updated_at = datetime.utcnow()
+                                self.session.add(parent)
+            elif item.device_id:
+                device = await self.session.get(Device, item.device_id)
+                if device:
+                    result = await self.session.execute(
+                        select(DeviceChild).where(DeviceChild.parent_id == device.id)
+                    )
+                    children = result.scalars().all()
+                    
+                    if not children:
+                        device.device_status = "TERSEDIA"
+                        device.updated_at = datetime.utcnow()
+                        self.session.add(device)
+                    else:
+                        for child in children:
+                            if child.device_status == "DIPINJAM":
+                                child.device_status = "TERSEDIA"
+                                child.updated_at = datetime.utcnow()
+                                self.session.add(child)
+                        device.device_status = "TERSEDIA"
+                        device.updated_at = datetime.utcnow()
+                        self.session.add(device)
         
         # Create history record
         history = LoanHistory(
@@ -606,7 +669,7 @@ class LoanRepository:
         return result.scalars().all()
 
     async def check_device_availability(self, device_id: int, start_date: date, end_date: date, 
-                                      exclude_loan_id: Optional[int] = None) -> bool:
+                                      exclude_loan_id: Optional[int] = None, is_child: bool = False) -> bool:
         """Check if device is available for the given date range."""
         query = select(DeviceLoan.id).where(
             and_(
@@ -618,7 +681,17 @@ class LoanRepository:
                     and_(DeviceLoan.loan_start_date >= start_date, DeviceLoan.loan_end_date <= end_date)
                 )
             )
-        ).join(DeviceLoanItem).where(DeviceLoanItem.device_id == device_id)
+        ).join(DeviceLoanItem)
+
+        if is_child:
+            # Ini adalah child device
+            query = query.where(DeviceLoanItem.child_device_id == device_id)
+        else:
+            # Ini adalah parent device
+            query = query.where(and_(
+                DeviceLoanItem.device_id == device_id,
+                DeviceLoanItem.child_device_id.is_(None)
+            ))
         
         if exclude_loan_id:
             query = query.where(DeviceLoan.id != exclude_loan_id)
