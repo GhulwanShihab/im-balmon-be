@@ -68,7 +68,7 @@ class DeviceLoan(BaseModel, SQLModel, table=True):
 
     # Borrower information
     borrower_name: str = Field(description="Nama pengguna")
-    borrower_user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")), description="ID user peminjam")
+    borrower_user_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("users.id", ondelete="SET NULL")), description="ID user peminjam")
 
     # Activity details
     activity_name: str = Field(description="Nama kegiatan")
@@ -185,7 +185,7 @@ class DeviceConditionChangeRequest(BaseModel, SQLModel, table=True):
     loan_item_id: int = Field(sa_column=Column(ForeignKey("device_loan_items.id", ondelete="CASCADE")), description="Item peminjaman terkait")
     device_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("devices.id", ondelete="CASCADE")))
     child_device_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("device_children.id", ondelete="CASCADE")))
-    requested_by_user_id: int = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE")), description="User yang meminta perubahan")
+    requested_by_user_id: Optional[int] = Field(default=None, sa_column=Column(ForeignKey("users.id", ondelete="SET NULL")), description="User yang meminta perubahan")
 
     old_condition: Optional[str] = Field(default=None, max_length=50)
     new_condition: Optional[str] = Field(default=None, max_length=50)

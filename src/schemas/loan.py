@@ -147,7 +147,7 @@ class DeviceLoanResponse(DeviceLoanBase):
     """Schema for loan response."""
     id: int
     loan_number: str
-    borrower_user_id: int
+    borrower_user_id: Optional[int]
     loan_end_date: date
     pihak_1: Optional[EmployeeResponse]
     pihak_2: Optional[EmployeeResponse]
@@ -200,7 +200,7 @@ class LoanHistoryResponse(BaseModel):
     old_status: Optional[LoanStatus]
     new_status: LoanStatus
     change_reason: Optional[str]
-    changed_by_user_id: int
+    changed_by_user_id: Optional[int]
     change_date: datetime
     notes: Optional[str]
 
